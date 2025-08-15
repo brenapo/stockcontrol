@@ -1,4 +1,4 @@
-echo "# Controle de Estoque — Flask
+Controle de Estoque — Flask
 
 Aplicação web para controle de estoque, desenvolvida em **Flask** com suporte a cadastro de produtos, categorias, fornecedores, movimentações e relatórios.
 
