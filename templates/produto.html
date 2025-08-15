@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+
+  <!-- Cabeçalho do Produto -->
+  <div class="mb-3 d-flex justify-content-between align-items-center">
+    <h2 class="mb-0">
+      {{ p.name }} 
+      <small class="text-muted">(#{{ p.id }})</small>
+    </h2>
+    <div>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('index') }}">
+        <i class="bi bi-arrow-left"></i> Voltar
+      </a>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('editar_produto', pid=p.id) }}">
+        <i class="bi bi-pencil-square"></i> Editar
+      </a>
+    </div>
+  </div>
+
+  <!-- Informações principais -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <p class="mb-1">
+        <strong>SKU:</strong> {{ p.sku }} |
+        <strong>Categoria:</strong> {{ p.category_name or '-' }} |
+        <strong>Fornecedor:</strong> {{ p.supplier_name or '-' }} |
+        <strong>Unidade:</strong> {{ p.unit or 'un' }}
+      </p>
+      <p class="mb-1">
+        <strong>Preço de venda:</strong> R$ {{ '%.2f'|format(p.price) }} |
+        <strong>CMP:</strong> R$ {{ '%.2f'|format(p.avg_cost) }} |
+        <strong>Margem:</strong> 
+        R$ {{ '%.2f'|format(p.price - p.avg_cost) }}
+        ({{ p.price>0 and ('%.2f'|format(100.0*(p.price - p.avg_cost)/p.price)) or '0.00' }}%)
+      </p>
+      <p class="mb-0">
+        <strong>Estoque mínimo:</strong> {{ '%.2f'|format(p.min_qty) }} |
+        <strong>Saldo atual:</strong> {{ '%.2f'|format(p.current_qty) }}
+      </p>
+    </div>
+  </div>
+
+  <!-- Filtro de histórico -->
+  <div class="mb-4">
+    <h5>Filtrar histórico</h5>
+    <form method="get" class="row g-2" action="{{ url_for('produto', pid=p.id) }}">
+      <div class="col-md-3">
+        <label class="form-label">De:</label>
+        <input type="date" name="start" value="{{ start or '' }}" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Até:</label>
+        <input type="date" name="end" value="{{ end or '' }}" class="form-control">
+      </div>
+      <div class="col-md-2 align-self-end">
+        <button class="btn btn-primary w-100" type="submit">
+          <i class="bi bi-filter"></i> Aplicar
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Histórico de movimentações -->
+  <div>
+    <h5>Movimentações</h5>
+    {% if not movs %}
+      <div class="alert alert-secondary">Sem histórico neste período.</div>
+    {% else %}
+      <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Data/Hora</th>
+              <th>Tipo</th>
+              <th>Qtd</th>
+              <th>Custo</th>
+              <th>Motivo</th>
+              <th>Observação</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in movs %}
+              <tr>
+                <td>{{ m.ts }}</td>
+                <td>
+                  {% if m.type == 'IN' %}
+                    <span class="badge bg-success">Entrada</span>
+                  {% else %}
+                    <span class="badge bg-danger">Saída</span>
+                  {% endif %}
+                </td>
+                <td>{{ '%.2f'|format(m.quantity) }}</td>
+                <td>{{ m.unit_cost is not none and ('R$ ' + ('%.2f'|format(m.unit_cost))) or '-' }}</td>
+                <td>{{ m.reason or '-' }}</td>
+                <td>{{ m.note or '' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+
+{% endblock %}

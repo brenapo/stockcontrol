@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Fornecedores
+      {% if sups %}<span class="badge text-bg-secondary">{{ sups|length }}</span>{% endif %}
+    </h2>
+
+    <!-- busca (GET) -->
+    <form method="get" class="d-flex gap-2">
+      <input type="text" name="q" value="{{ q or '' }}" class="form-control" placeholder="Buscar por nome/contato">
+      <button class="btn btn-outline-primary" type="submit">
+        <i class="bi bi-search"></i> Buscar
+      </button>
+    </form>
+  </div>
+
+  <!-- adicionar fornecedor -->
+  <form method="post" class="row g-2 align-items-end mb-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="col-12 col-md-5">
+      <label class="form-label">Nome do fornecedor</label>
+      <input type="text" name="name" class="form-control" placeholder="Ex.: ACME Distribuidora"
+             required autofocus autocomplete="organization">
+    </div>
+    <div class="col-12 col-md-5">
+      <label class="form-label">Contato (email/telefone)</label>
+      <input type="text" name="contact" class="form-control"
+             placeholder="exemplo@empresa.com / (11) 99999-9999" autocomplete="email">
+    </div>
+    <div class="col-12 col-md-2">
+      <label class="form-label d-none d-md-block">&nbsp;</label>
+      <button class="btn btn-primary w-100" type="submit">
+        <i class="bi bi-plus-circle"></i> Adicionar
+      </button>
+    </div>
+  </form>
+
+  {% if not sups %}
+    <div class="alert alert-info"><i class="bi bi-info-circle"></i> Nenhum fornecedor cadastrado.</div>
+  {% else %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 100px;">ID</th>
+            <th>Nome</th>
+            <th>Contato</th>
+            <th class="text-end" style="width: 160px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sups %}
+          <tr>
+            <td>{{ s.id }}</td>
+            <td>{{ s.name }}</td>
+            <td>
+              {% set ct = (s.contact or '').strip() %}
+              {% if '@' in ct %}
+                <a href="mailto:{{ ct }}" class="text-decoration-none">{{ ct }}</a>
+              {% elif ct and (ct[0].isdigit() or ct[0] in ['+','(']) %}
+                <a href="tel:{{ ct|replace(' ','') }}" class="text-decoration-none">{{ ct }}</a>
+              {% else %}
+                {{ ct or '-' }}
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <form class="d-inline" method="post" action="{{ url_for('fornecedores_excluir', sid=s.id) }}" onsubmit="return confirm('Remover fornecedor?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-outline-danger btn-sm" type="submit">
+                  <i class="bi bi-trash3"></i> Excluir
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+{% endblock %}

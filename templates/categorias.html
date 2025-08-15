@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Categorias</h2>
+  </div>
+
+  <!-- adicionar categoria -->
+  <form method="post" class="row g-2 align-items-end mb-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="col-12 col-md-6 col-lg-4">
+      <label class="form-label">Nova categoria</label>
+      <input type="text" name="name" class="form-control" placeholder="Ex.: Periféricos" required>
+    </div>
+    <div class="col-12 col-md-3 col-lg-2">
+      <label class="form-label d-none d-md-block">&nbsp;</label>
+      <button class="btn btn-primary w-100" type="submit">
+        <i class="bi bi-plus-circle"></i> Adicionar
+      </button>
+    </div>
+  </form>
+
+  {% if not cats %}
+    <div class="alert alert-info"><i class="bi bi-info-circle"></i> Nenhuma categoria cadastrada.</div>
+  {% else %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 100px;">ID</th>
+            <th>Nome</th>
+            <th class="text-end" style="width: 160px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in cats %}
+          <tr>
+            <td>{{ c.id }}</td>
+            <td>{{ c.name }}</td>
+            <td class="text-end">
+              <form class="d-inline" method="post" action="{{ url_for('categorias_excluir', cid=c.id) }}" onsubmit="return confirm('Remover categoria?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-outline-danger btn-sm" type="submit">
+                  <i class="bi bi-trash3"></i> Excluir
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+{% endblock %}

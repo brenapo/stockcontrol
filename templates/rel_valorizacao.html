@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Relatório — Valorização do estoque</h2>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('export_produtos') }}">
+        <i class="bi bi-download"></i> Exportar Produtos (CSV)
+      </a>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('rel_baixo_estoque') }}">
+        <i class="bi bi-exclamation-circle"></i> Baixo estoque
+      </a>
+    </div>
+  </div>
+
+  {% if not rows %}
+    <div class="alert alert-info"><i class="bi bi-info-circle"></i> Nenhum produto cadastrado.</div>
+  {% else %}
+
+    <!-- Cards de totais -->
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="text-secondary small">Total a preço de venda</div>
+            <div class="fs-4 fw-semibold">R$ {{ '%.2f'|format(total_price) }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="text-secondary small">Total de custo (CMP)</div>
+            <div class="fs-4 fw-semibold">R$ {{ '%.2f'|format(total_cost) }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="text-secondary small">Lucro potencial</div>
+            <div class="fs-4 fw-semibold">R$ {{ '%.2f'|format(total_price - total_cost) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="table-responsive">
+      <table class="table table-striped table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Nome</th>
+            <th>SKU</th>
+            <th>Un</th>
+            <th class="text-end">Qtd</th>
+            <th class="text-end">Preço</th>
+            <th class="text-end">CMP</th>
+            <th class="text-end">Subtotal (venda)</th>
+            <th class="text-end">Custo Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>{{ r.name }}</td>
+            <td><span class="text-secondary">{{ r.sku }}</span></td>
+            <td>{{ r.unit }}</td>
+            <td class="text-end">{{ r.current_qty }}</td>
+            <td class="text-end">R$ {{ r.price }}</td>
+            <td class="text-end">R$ {{ r.avg_cost }}</td>
+            <td class="text-end">R$ {{ r.subtotal }}</td>
+            <td class="text-end">R$ {{ r.custo_total }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="fw-semibold">
+            <td colspan="6" class="text-end">Totais</td>
+            <td class="text-end">R$ {{ '%.2f'|format(total_price) }}</td>
+            <td class="text-end">R$ {{ '%.2f'|format(total_cost) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+  {% endif %}
+
+{% endblock %}

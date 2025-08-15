@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+
+  <div class="mb-4">
+    <h2 class="mb-3">Cadastrar Produto</h2>
+  </div>
+
+  <form method="post" class="row g-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="col-md-3">
+      <label class="form-label">SKU (código único)</label>
+      <input type="text" name="sku" class="form-control" placeholder="Ex.: PROD123"
+             value="{{ form.get('sku','') }}" required>
+    </div>
+
+    <div class="col-md-5">
+      <label class="form-label">Nome do produto</label>
+      <input type="text" name="name" class="form-control" placeholder="Ex.: Caneta Azul"
+             value="{{ form.get('name','') }}" required>
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label">Categoria</label>
+      <select name="category_id" class="form-select">
+        <option value="">(Sem categoria)</option>
+        {% for c in cats %}
+          <option value="{{ c.id }}" {{ 'selected' if form.get('category_id')|int == c.id else '' }}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label">Fornecedor</label>
+      <select name="supplier_id" class="form-select">
+        <option value="">(Sem fornecedor)</option>
+        {% for s in sups %}
+          <option value="{{ s.id }}" {{ 'selected' if form.get('supplier_id')|int == s.id else '' }}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label">Unidade</label>
+      <input type="text" name="unit" class="form-control" placeholder="Ex.: un, cx, kg"
+             value="{{ form.get('unit','un') }}">
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label">Preço de venda</label>
+      <input type="number" step="0.01" name="price" class="form-control"
+             placeholder="0,00" value="{{ form.get('price','') }}">
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label">Estoque mínimo</label>
+      <input type="number" step="0.01" name="min_qty" class="form-control"
+             placeholder="0" value="{{ form.get('min_qty','0') }}">
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label">Estoque inicial</label>
+      <input type="number" step="1" name="qty" class="form-control"
+             placeholder="0" value="{{ form.get('qty','0') }}">
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Custo do estoque inicial (opcional)</label>
+      <input type="number" step="0.01" name="start_cost" class="form-control"
+             placeholder="0,00">
+    </div>
+
+    <div class="col-12 mt-3">
+      <button class="btn btn-success">
+        <i class="bi bi-save"></i> Salvar Produto
+      </button>
+    </div>
+  </form>
+
+{% endblock %}

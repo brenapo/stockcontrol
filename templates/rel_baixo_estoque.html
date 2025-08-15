@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Relatório — Baixo estoque</h2>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('index') }}">
+      <i class="bi bi-arrow-left"></i> Voltar aos produtos
+    </a>
+  </div>
+
+  {% if not itens %}
+    <div class="alert alert-success d-flex align-items-center" role="alert">
+      <i class="bi bi-check-circle me-2"></i>
+      Nenhum item está abaixo do estoque mínimo. Tudo certo por aqui!
+    </div>
+  {% else %}
+    <div class="alert alert-warning d-flex align-items-center" role="alert">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      {{ itens|length }} item(ns) com estoque em nível crítico. Reabasteça o quanto antes.
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-striped table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 90px;">ID</th>
+            <th>SKU</th>
+            <th>Nome</th>
+            <th>Un</th>
+            <th class="text-end">Qtd atual</th>
+            <th class="text-end">Mínimo</th>
+            <th class="text-end" style="width: 160px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for it in itens %}
+          <tr>
+            <td>{{ it.id }}</td>
+            <td><span class="text-secondary">{{ it.sku }}</span></td>
+            <td>
+              <a class="link-underline link-underline-opacity-0" href="{{ url_for('produto', pid=it.id) }}">
+                {{ it.name }}
+              </a>
+            </td>
+            <td>{{ it.unit }}</td>
+            <td class="text-end fw-semibold text-danger">{{ it.current_qty }}</td>
+            <td class="text-end">{{ it.min_qty }}</td>
+            <td class="text-end">
+              {% if current_user.role in ['admin','operador'] %}
+                <a class="btn btn-outline-success btn-sm" href="{{ url_for('produto', pid=it.id) }}" title="Fazer entrada">
+                  <i class="bi bi-box-arrow-in-down"></i> Entrada
+                </a>
+              {% else %}
+                <span class="text-secondary small">somente leitura</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+{% endblock %}

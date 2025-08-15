@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block content %}
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Usuários
+      {% if users %}<span class="badge text-bg-secondary">{{ users|length }}</span>{% endif %}
+    </h2>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('index') }}">
+      <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+  </div>
+
+  <!-- Criar novo usuário -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <h5 class="card-title mb-3">Adicionar usuário</h5>
+      <form method="post" class="row g-3 align-items-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="col-12 col-md-4">
+          <label class="form-label">Usuário</label>
+          <input type="text" name="username" class="form-control" placeholder="ex.: joao" required autocomplete="username" autofocus>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label">Senha</label>
+          <input type="password" name="password" class="form-control" placeholder="mín. 8 caracteres" required autocomplete="new-password">
+        </div>
+        <div class="col-12 col-md-3">
+          <label class="form-label">Papel</label>
+          <select name="role" class="form-select">
+            <option value="leitura">leitura</option>
+            <option value="operador">operador</option>
+            <option value="admin">admin</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-1">
+          <button class="btn btn-primary w-100" type="submit">
+            <i class="bi bi-person-plus"></i>
+          </button>
+        </div>
+        <div class="col-12">
+          <small class="text-secondary">
+            Dica: use senhas fortes (mínimo 8, misture letras, números e símbolos).
+          </small>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Lista de usuários -->
+  {% if not users %}
+    <div class="alert alert-info"><i class="bi bi-info-circle"></i> Nenhum usuário cadastrado além do admin padrão.</div>
+  {% else %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 80px;">ID</th>
+            <th>Usuário</th>
+            <th style="width: 140px;">Papel</th>
+            <th style="width: 220px;">Criado em</th>
+            <th class="text-end" style="width: 160px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>{{ u.id }}</td>
+            <td>
+              {{ u.username }}
+              {% if current_user.is_authenticated and u.id == current_user.id %}
+                <span class="badge text-bg-secondary ms-2">você</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if u.role == 'admin' %}
+                <span class="badge text-bg-danger">admin</span>
+              {% elif u.role == 'operador' %}
+                <span class="badge text-bg-primary">operador</span>
+              {% else %}
+                <span class="badge text-bg-secondary">leitura</span>
+              {% endif %}
+            </td>
+            <td class="text-secondary small">{{ u.created_at }}</td>
+            <td class="text-end">
+              {% if current_user.is_authenticated and u.id != current_user.id %}
+                <form class="d-inline" method="post" action="{{ url_for('usuarios_excluir', uid=u.id) }}" onsubmit="return confirm('Excluir o usuário {{ u.username }}?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-outline-danger btn-sm" type="submit">
+                    <i class="bi bi-trash3"></i> Excluir
+                  </button>
+                </form>
+              {% else %}
+                <span class="text-secondary small">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+{% endblock %}
