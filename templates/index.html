@@ -51,7 +51,7 @@
   <div class="d-flex justify-content-between align-items-center mt-3">
     <h5 class="mb-0">Total de produtos: <span class="badge text-bg-secondary">{{ total }}</span></h5>
     {% if current_user.role in ['admin','operador'] %}
-      <a class="btn btn-success" href="{{ url_for('novo_produto') }}"><i class="bi bi-plus-circle"></i> Cadastrar</a>
+      <a class="btn btn-success" href="{{ url_for('products.novo') }}"><i class="bi bi-plus-circle"></i> Cadastrar</a>
     {% endif %}
   </div>
 
@@ -71,7 +71,7 @@
           <tr>
             <td>{{ p.id }}</td>
             <td><span class="text-secondary">{{ p.sku }}</span></td>
-            <td><a class="link-underline link-underline-opacity-0" href="{{ url_for('produto', pid=p.id) }}">{{ p.name }}</a></td>
+            <td><a class="link-underline link-underline-opacity-0" href="{{ url_for('products.produto', pid=p.id) }}">{{ p.name }}</a></td>
             <td>{{ p.category or '-' }}</td>
             <td>{{ p.supplier or '-' }}</td>
             <td>{{ p.unit }}</td>
@@ -82,7 +82,7 @@
             <td>{{ p.min_qty }}</td>
             <td class="text-end table-actions">
               {% if current_user.role in ['admin','operador'] %}
-                <form class="d-inline" method="post" action="{{ url_for('entrada', pid=p.id) }}">
+                <form class="d-inline" method="post" action="{{ url_for('products.entrada', pid=p.id) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <div class="input-group input-group-sm" style="width: 310px; max-width: 100%;">
                     <input class="form-control" type="number" name="qtd" step="1" min="1" placeholder="+Qtd">
@@ -93,7 +93,7 @@
                     <button class="btn btn-outline-success" type="submit" title="Entrada"><i class="bi bi-box-arrow-in-down"></i></button>
                   </div>
                 </form>
-                <form class="d-inline" method="post" action="{{ url_for('saida', pid=p.id) }}">
+                <form class="d-inline" method="post" action="{{ url_for('products.saida', pid=p.id) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <div class="input-group input-group-sm mt-1" style="width: 260px; max-width: 100%;">
                     <input class="form-control" type="number" name="qtd" step="1" min="1" placeholder="-Qtd">
@@ -103,9 +103,9 @@
                     <button class="btn btn-outline-danger" type="submit" title="Saída"><i class="bi bi-box-arrow-up"></i></button>
                   </div>
                 </form>
-                <a class="btn btn-outline-secondary btn-sm mt-1" href="{{ url_for('editar_produto', pid=p.id) }}"><i class="bi bi-pencil-square"></i></a>
+                <a class="btn btn-outline-secondary btn-sm mt-1" href="{{ url_for('products.editar', pid=p.id) }}"><i class="bi bi-pencil-square"></i></a>
                 {% if current_user.role == 'admin' %}
-                  <form class="d-inline" method="post" action="{{ url_for('excluir_produto', pid=p.id) }}" onsubmit="return confirm('Excluir este produto e seu histórico?');">
+                  <form class="d-inline" method="post" action="{{ url_for('products.excluir', pid=p.id) }}" onsubmit="return confirm('Excluir este produto e seu histórico?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button class="btn btn-outline-danger btn-sm mt-1" type="submit"><i class="bi bi-trash3"></i></button>
                   </form>
@@ -124,11 +124,11 @@
     <nav>
       <ul class="pagination justify-content-center">
         {% if page > 1 %}
-          <li class="page-item"><a class="page-link" href="{{ url_for('index', q=q, sort=sort, dir=direction, page=page-1, cat=cat_sel, sup=sup_sel) }}">« Anterior</a></li>
+          <li class="page-item"><a class="page-link" href="{{ url_for('products.index', q=q, sort=sort, dir=direction, page=page-1, cat=cat_sel, sup=sup_sel) }}">« Anterior</a></li>
         {% else %}<li class="page-item disabled"><span class="page-link">« Anterior</span></li>{% endif %}
         <li class="page-item disabled"><span class="page-link">Página {{ page }} de {{ pages }}</span></li>
         {% if page < pages %}
-          <li class="page-item"><a class="page-link" href="{{ url_for('index', q=q, sort=sort, dir=direction, page=page+1, cat=cat_sel, sup=sup_sel) }}">Próxima »</a></li>
+          <li class="page-item"><a class="page-link" href="{{ url_for('products.index', q=q, sort=sort, dir=direction, page=page+1, cat=cat_sel, sup=sup_sel) }}">Próxima »</a></li>
         {% else %}<li class="page-item disabled"><span class="page-link">Próxima »</span></li>{% endif %}
       </ul>
     </nav>

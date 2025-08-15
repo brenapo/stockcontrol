@@ -3,7 +3,7 @@
 
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">Relatório — Baixo estoque</h2>
-    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('index') }}">
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('products.index') }}">
       <i class="bi bi-arrow-left"></i> Voltar aos produtos
     </a>
   </div>
@@ -38,7 +38,7 @@
             <td>{{ it.id }}</td>
             <td><span class="text-secondary">{{ it.sku }}</span></td>
             <td>
-              <a class="link-underline link-underline-opacity-0" href="{{ url_for('produto', pid=it.id) }}">
+              <a class="link-underline link-underline-opacity-0" href="{{ url_for('products.produto', pid=it.id) }}">
                 {{ it.name }}
               </a>
             </td>
@@ -47,7 +47,7 @@
             <td class="text-end">{{ it.min_qty }}</td>
             <td class="text-end">
               {% if current_user.role in ['admin','operador'] %}
-                <a class="btn btn-outline-success btn-sm" href="{{ url_for('produto', pid=it.id) }}" title="Fazer entrada">
+                <a class="btn btn-outline-success btn-sm" href="{{ url_for('products.produto', pid=it.id) }}" title="Fazer entrada">
                   <i class="bi bi-box-arrow-in-down"></i> Entrada
                 </a>
               {% else %}

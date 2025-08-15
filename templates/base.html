@@ -19,36 +19,76 @@
   <!-- Navbar -->
   <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
     <div class="container">
-      <a class="navbar-brand fw-semibold" href="{{ url_for('index') }}"><i class="bi bi-box-seam"></i> Estoque</a>
+      <a class="navbar-brand fw-semibold" href="{{ url_for('products.index') }}">
+        <i class="bi bi-box-seam"></i> Estoque
+      </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topnav">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div id="topnav" class="collapse navbar-collapse">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           {% if current_user.is_authenticated %}
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="bi bi-list-ul"></i> Produtos</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('categorias') }}"><i class="bi bi-tags"></i> Categorias</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('fornecedores') }}"><i class="bi bi-truck"></i> Fornecedores</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('rel_baixo_estoque') }}"><i class="bi bi-exclamation-circle"></i> Baixo estoque</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('rel_valorizacao') }}"><i class="bi bi-cash-coin"></i> Valorização</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('export_produtos') }}"><i class="bi bi-download"></i> Exportar Produtos</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('export_movimentos') }}"><i class="bi bi-download"></i> Exportar Movimentos</a></li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('products.index') }}">
+                <i class="bi bi-list-ul"></i> Produtos
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('categories.view') }}">
+                <i class="bi bi-tags"></i> Categorias
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('suppliers.view') }}">
+                <i class="bi bi-truck"></i> Fornecedores
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('reports.low_stock') }}">
+                <i class="bi bi-exclamation-circle"></i> Baixo estoque
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('reports.valuation') }}">
+                <i class="bi bi-cash-coin"></i> Valorização
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('export.export_products') }}">
+                <i class="bi bi-download"></i> Exportar Produtos
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('export.export_moves') }}">
+                <i class="bi bi-download"></i> Exportar Movimentos
+              </a>
+            </li>
             {% if current_user.role == 'admin' %}
-              <li class="nav-item"><a class="nav-link" href="{{ url_for('usuarios') }}"><i class="bi bi-people"></i> Usuários</a></li>
+              <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('users.manage') }}">
+                  <i class="bi bi-people"></i> Usuários
+                </a>
+              </li>
             {% endif %}
           {% endif %}
         </ul>
 
         <div class="d-flex align-items-center gap-3">
           {% if current_user.is_authenticated %}
-            <span class="text-secondary small">Olá, <strong>{{ current_user.username }}</strong> ({{ current_user.role }})</span>
-            <form method="post" action="{{ url_for('logout') }}">
+            <span class="text-secondary small">
+              Olá, <strong>{{ current_user.username }}</strong> ({{ current_user.role }})
+            </span>
+            <form method="post" action="{{ url_for('auth.logout') }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button class="btn btn-outline-secondary btn-sm" type="submit"><i class="bi bi-box-arrow-right"></i> Sair</button>
+              <button class="btn btn-outline-secondary btn-sm" type="submit">
+                <i class="bi bi-box-arrow-right"></i> Sair
+              </button>
             </form>
           {% endif %}
           <!-- toggle claro/escuro -->
-          <button class="btn btn-outline-dark btn-sm" id="themeToggle" type="button"><i class="bi bi-moon-stars"></i></button>
+          <button class="btn btn-outline-dark btn-sm" id="themeToggle" type="button">
+            <i class="bi bi-moon-stars"></i>
+          </button>
         </div>
       </div>
     </div>

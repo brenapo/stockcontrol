@@ -7,6 +7,10 @@ def get_conn():
     db_path = current_app.config["DB_PATH"]
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
+    # 💡 melhorias importantes no SQLite
+    conn.execute("PRAGMA foreign_keys = ON;")        # respeitar FKs
+    conn.execute("PRAGMA journal_mode = WAL;")       # melhor escrita/leitura
+    conn.execute("PRAGMA synchronous = NORMAL;")     # equilíbrio segurança x performance
     return conn
 
 def init_db():
@@ -16,11 +20,15 @@ def init_db():
     # Tabelas base
     c.execute("""CREATE TABLE IF NOT EXISTS categories(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT UNIQUE NOT NULL)""")
+        name TEXT UNIQUE NOT NULL
+    )""")
+
     c.execute("""CREATE TABLE IF NOT EXISTS suppliers(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT UNIQUE NOT NULL,
-        contact TEXT)""")
+        contact TEXT
+    )""")
+
     c.execute("""CREATE TABLE IF NOT EXISTS products(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         sku TEXT UNIQUE NOT NULL,
@@ -34,7 +42,9 @@ def init_db():
         current_qty REAL DEFAULT 0,
         created_at TEXT,
         FOREIGN KEY(category_id) REFERENCES categories(id),
-        FOREIGN KEY(supplier_id) REFERENCES suppliers(id))""")
+        FOREIGN KEY(supplier_id) REFERENCES suppliers(id)
+    )""")
+
     c.execute("""CREATE TABLE IF NOT EXISTS stock_movements(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         product_id INTEGER NOT NULL,
@@ -44,13 +54,16 @@ def init_db():
         reason TEXT,
         note TEXT,
         ts TEXT,
-        FOREIGN KEY(product_id) REFERENCES products(id))""")
+        FOREIGN KEY(product_id) REFERENCES products(id)
+    )""")
+
     c.execute("""CREATE TABLE IF NOT EXISTS users(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
         passhash TEXT NOT NULL,
         role TEXT NOT NULL CHECK(role IN ('admin','operador','leitura')),
-        created_at TEXT)""")
+        created_at TEXT
+    )""")
 
     # Migrações leves (garantir colunas)
     def ensure_col(table, coldef):
@@ -73,6 +86,7 @@ def init_db():
             cid = cat_map.get(row["category"])
             if cid:
                 c.execute("UPDATE products SET category_id=? WHERE id=?", (cid, row["id"]))
+
     if "supplier" in cols:
         for (name,) in c.execute("SELECT DISTINCT supplier FROM products WHERE supplier IS NOT NULL AND TRIM(supplier)<>''"):
             c.execute("INSERT OR IGNORE INTO suppliers(name) VALUES(?)", (name,))
@@ -81,6 +95,14 @@ def init_db():
             sid = sup_map.get(row["supplier"])
             if sid:
                 c.execute("UPDATE products SET supplier_id=? WHERE id=?", (sid, row["id"]))
+
+    # 📈 Índices (idempotentes)
+    c.execute("CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_products_cat ON products(category_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_products_sup ON products(supplier_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_products_qty ON products(current_qty)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_movs_prod ON stock_movements(product_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_movs_ts   ON stock_movements(ts)")
 
     conn.commit()
 

@@ -5,7 +5,7 @@
     <h2 class="mb-0">Usuários
       {% if users %}<span class="badge text-bg-secondary">{{ users|length }}</span>{% endif %}
     </h2>
-    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('index') }}">
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('products.index') }}">
       <i class="bi bi-arrow-left"></i> Voltar
     </a>
   </div>
@@ -83,7 +83,7 @@
             <td class="text-secondary small">{{ u.created_at }}</td>
             <td class="text-end">
               {% if current_user.is_authenticated and u.id != current_user.id %}
-                <form class="d-inline" method="post" action="{{ url_for('usuarios_excluir', uid=u.id) }}" onsubmit="return confirm('Excluir o usuário {{ u.username }}?');">
+                <form class="d-inline" method="post" action="{{ url_for('users.delete', uid=u.id) }}" onsubmit="return confirm('Excluir o usuário {{ u.username }}?');">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="btn btn-outline-danger btn-sm" type="submit">
                     <i class="bi bi-trash3"></i> Excluir

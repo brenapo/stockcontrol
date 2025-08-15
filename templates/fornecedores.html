@@ -65,7 +65,7 @@
               {% endif %}
             </td>
             <td class="text-end">
-              <form class="d-inline" method="post" action="{{ url_for('fornecedores_excluir', sid=s.id) }}" onsubmit="return confirm('Remover fornecedor?');">
+              <form class="d-inline" method="post" action="{{ url_for('suppliers.delete', sid=s.id) }}" onsubmit="return confirm('Remover fornecedor?');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-outline-danger btn-sm" type="submit">
                   <i class="bi bi-trash3"></i> Excluir

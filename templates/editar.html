@@ -3,7 +3,7 @@
 
   <div class="mb-4 d-flex justify-content-between align-items-center">
     <h2 class="mb-0">Editar Produto #{{ p.id }}</h2>
-    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('index') }}">
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('products.index') }}">
       <i class="bi bi-arrow-left"></i> Voltar
     </a>
   </div>
@@ -65,7 +65,7 @@
       <button class="btn btn-success" type="submit">
         <i class="bi bi-save"></i> Salvar
       </button>
-      <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">
+      <a class="btn btn-outline-secondary" href="{{ url_for('products.index') }}">
         Cancelar
       </a>
     </div>

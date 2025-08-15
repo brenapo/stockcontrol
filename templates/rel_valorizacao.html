@@ -4,10 +4,10 @@
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">Relatório — Valorização do estoque</h2>
     <div class="d-flex gap-2">
-      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('export_produtos') }}">
+      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('export.export_products') }}">
         <i class="bi bi-download"></i> Exportar Produtos (CSV)
       </a>
-      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('rel_baixo_estoque') }}">
+      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('reports.low_stock') }}">
         <i class="bi bi-exclamation-circle"></i> Baixo estoque
       </a>
     </div>
