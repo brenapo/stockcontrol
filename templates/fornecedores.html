@@ -16,7 +16,7 @@
   </div>
 
   <!-- adicionar fornecedor -->
-  <form method="post" class="row g-2 align-items-end mb-3">
+  <form method="post" action="{{ url_for('suppliers.view') }}" class="row g-2 align-items-end mb-3">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="col-12 col-md-5">
       <label class="form-label">Nome do fornecedor</label>

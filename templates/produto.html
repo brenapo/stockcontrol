@@ -4,15 +4,15 @@
   <!-- Cabeçalho do Produto -->
   <div class="mb-3 d-flex justify-content-between align-items-center">
     <h2 class="mb-0">
-      {{ p.name }} 
+      {{ p.name }}
       <small class="text-muted">(#{{ p.id }})</small>
     </h2>
     <div>
-      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('products.editar.index') }}">
+      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('products.index') }}">
         <i class="bi bi-arrow-left"></i> Voltar
       </a>
-      <a class="btn btn-primary btn-sm" href="{{ url_for('products.editar', pid=p.id) }}">
-        <i class="bi bi-pencil-square"></i> Editar
+      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('products.editar', pid=p.id) }}">
+        Editar
       </a>
     </div>
   </div>
@@ -29,7 +29,7 @@
       <p class="mb-1">
         <strong>Preço de venda:</strong> R$ {{ '%.2f'|format(p.price) }} |
         <strong>CMP:</strong> R$ {{ '%.2f'|format(p.avg_cost) }} |
-        <strong>Margem:</strong> 
+        <strong>Margem:</strong>
         R$ {{ '%.2f'|format(p.price - p.avg_cost) }}
         ({{ p.price>0 and ('%.2f'|format(100.0*(p.price - p.avg_cost)/p.price)) or '0.00' }}%)
       </p>

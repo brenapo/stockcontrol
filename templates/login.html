@@ -33,7 +33,7 @@
           {% endif %}
         {% endwith %}
 
-        <form method="post" class="vstack gap-3">
+        <form method="post" action="{{ url_for('auth.login') }}" class="vstack gap-3">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div>
             <label class="form-label">Usuário</label>

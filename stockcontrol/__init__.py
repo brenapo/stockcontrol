@@ -1,3 +1,4 @@
+# stockcontrol/__init__.py
 import os
 from flask import Flask, render_template
 from flask_login import LoginManager
@@ -19,32 +20,31 @@ def create_app():
     login_manager.init_app(app)
     csrf.init_app(app)
 
-    # user_loader
     @login_manager.user_loader
     def _load(uid):
         return load_user(uid)
 
-    # DB init & migrações
+    # DB init (SQLite manual, sem SQLAlchemy)
     with app.app_context():
-        init_db()
+        init_db()  # <- sem argumentos
 
-    # Blueprints (registre tudo AQUI dentro)
+    # Blueprints
     from .routes.auth_routes import bp as bp_auth
     from .routes.users import bp as bp_users
     from .routes.products import bp as bp_products
     from .routes.categories import bp as bp_categories
     from .routes.suppliers import bp as bp_suppliers
-    from .routes import reports  # módulo que contém bp e bp_export
+    from .routes import reports
 
     app.register_blueprint(bp_auth)
     app.register_blueprint(bp_users)
     app.register_blueprint(bp_products)
     app.register_blueprint(bp_categories)
     app.register_blueprint(bp_suppliers)
-    app.register_blueprint(reports.bp)         # /relatorios/...
-    app.register_blueprint(reports.bp_export)  # /export/...
+    app.register_blueprint(reports.bp)
+    app.register_blueprint(reports.bp_export)
 
-    # Error handlers
+    # Errors
     @app.errorhandler(404)
     def not_found(e):
         return render_template("error.html", code=404, msg="Página não encontrada."), 404
