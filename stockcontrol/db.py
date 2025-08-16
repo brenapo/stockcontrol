@@ -107,14 +107,33 @@ def _create_base_tables(c):
         created_at TEXT
     )""")
 
+    # === Barcodes ============================================================
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS product_barcodes(
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        symbology  TEXT NOT NULL CHECK(symbology IN ('EAN13','EAN8','UPC','CODE128','ITF14','QR')),
+        code       TEXT NOT NULL UNIQUE,      -- guardar como TEXTO (zeros à esquerda!)
+        pack_qty   INTEGER NOT NULL DEFAULT 1,
+        label      TEXT,                      -- ex.: 'UN', 'CX'
+        is_primary INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT,
+        FOREIGN KEY(product_id) REFERENCES products(id)
+    )
+    """)
+
 # ==============================
 # Migrações leves (colunas/fill)
 # ==============================
 def _light_migrations(c):
-    # Garante colunas recentes
+    # Garante colunas recentes em products
     _ensure_col(c, "products", "category_id INTEGER")
     _ensure_col(c, "products", "supplier_id INTEGER")
     _ensure_col(c, "products", "avg_cost REAL DEFAULT 0")
+
+    # Garante colunas recentes em product_barcodes
+    _ensure_col(c, "product_barcodes", "is_primary INTEGER NOT NULL DEFAULT 0")
+    _ensure_col(c, "product_barcodes", "created_at TEXT")
 
     # Migra textos antigos (category/supplier -> *id)
     cols = {r["name"] for r in c.execute("PRAGMA table_info(products)")}
@@ -146,12 +165,24 @@ def _light_migrations(c):
 # Índices
 # ==============================
 def apply_indexes(c):
+    # Produtos / movimentos
     c.execute("CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_products_cat ON products(category_id)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_products_sup ON products(supplier_id)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_products_qty ON products(current_qty)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_movs_prod  ON stock_movements(product_id)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_movs_ts    ON stock_movements(ts)")
+
+    # Barcodes
+    c.execute("CREATE INDEX IF NOT EXISTS idx_barcodes_code    ON product_barcodes(code)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_barcodes_product ON product_barcodes(product_id)")
+
+    # Apenas um primário por produto (índice único parcial)
+    c.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS ux_barcode_primary_per_product
+        ON product_barcodes(product_id)
+        WHERE is_primary = 1
+    """)
 
 # ==============================
 # Views (relatórios úteis)
@@ -301,6 +332,38 @@ def ensure_admin(username="admin", password="admin123", role="admin"):
 def reset_admin(password="admin123"):
     """Força senha do admin padrão."""
     ensure_admin(username="admin", password=password, role="admin")
+
+# ==============================
+# Barcodes helpers
+# ==============================
+def find_product_by_barcode(code: str):
+    """Retorna row de products pelo código de barras, ou None."""
+    code = (code or "").strip()
+    if not code:
+        return None
+    conn = get_conn()
+    c = conn.cursor()
+    row = c.execute("""
+        SELECT p.* FROM product_barcodes b
+        JOIN products p ON p.id = b.product_id
+        WHERE b.code = ?
+        LIMIT 1
+    """, (code,)).fetchone()
+    conn.close()
+    return row
+
+def add_barcode(product_id: int, code: str, symbology: str = "CODE128",
+                pack_qty: int = 1, label: str = "UN", is_primary: int = 0):
+    """Adiciona um código ao produto (code é único)."""
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""
+      INSERT INTO product_barcodes(product_id, symbology, code, pack_qty, label, is_primary, created_at)
+      VALUES (?,?,?,?,?,?,?)
+    """, (product_id, (symbology or "CODE128").strip().upper(), (code or "").strip(),
+          int(pack_qty or 1), label, int(is_primary or 0), now_str()))
+    conn.commit()
+    conn.close()
 
 # ==============================
 # INIT DB (idempotente)

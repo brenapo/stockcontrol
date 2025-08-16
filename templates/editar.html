@@ -71,4 +71,84 @@
     </div>
   </form>
 
+  <!-- ========================= -->
+  <!-- Códigos de barras (novo)  -->
+  <!-- ========================= -->
+  <div class="mt-5">
+    <h5 class="mb-3">Códigos de barras</h5>
+
+    <!-- Form para adicionar novo código -->
+    <form method="post" action="{{ url_for('products.add_barcode_route', pid=p.id) }}" class="row g-2 align-items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="col-md-3">
+        <label class="form-label">Código</label>
+        <input name="code" class="form-control" placeholder="ex.: 7891234567895" required>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Simbologia</label>
+        <select name="symbology" class="form-select">
+          <option value="EAN13">EAN13</option>
+          <option value="EAN8">EAN8</option>
+          <option value="UPC">UPC</option>
+          <option value="CODE128" selected>CODE128</option>
+          <option value="ITF14">ITF14</option>
+          <option value="QR">QR</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">Pack</label>
+        <input name="pack_qty" type="number" step="1" min="1" value="1" class="form-control">
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">Rótulo</label>
+        <input name="label" class="form-control" placeholder="UN / CX">
+      </div>
+
+      <div class="col-md-2">
+        <button class="btn btn-outline-primary w-100">Adicionar</button>
+      </div>
+    </form>
+
+    <!-- Lista de códigos já cadastrados -->
+    <div class="table-responsive mt-3">
+      <table class="table table-sm table-striped align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Código</th>
+            <th>Tipo</th>
+            <th>Pack</th>
+            <th>Rótulo</th>
+            <th style="width: 1%"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in barcodes %}
+            <tr>
+              <td class="font-monospace">{{ b.code }}</td>
+              <td>{{ b.symbology }}</td>
+              <td>{{ b.pack_qty }}</td>
+              <td>{{ b.label or '-' }}</td>
+              <td>
+                <form method="post" action="{{ url_for('products.remove_barcode', bid=b.id, pid=p.id) }}" onsubmit="return confirm('Remover este código?')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-muted text-center">Nenhum código cadastrado.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 {% endblock %}

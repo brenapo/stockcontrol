@@ -48,6 +48,57 @@
     </div>
   </form>
 
+  <!-- Scan rápido por código de barras (leva para a página do produto) -->
+  {% if current_user.role in ['admin','operador'] %}
+    <form method="post" action="{{ url_for('products.scan') }}" class="d-flex gap-2 mt-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input
+        name="barcode"
+        class="form-control"
+        placeholder="Escaneie ou digite o código de barras..."
+        inputmode="numeric"
+        autocapitalize="off" autocorrect="off" spellcheck="false"
+        autofocus
+      >
+      <button class="btn btn-secondary" type="submit">
+        <i class="bi bi-upc-scan"></i> Scan
+      </button>
+    </form>
+
+    <!-- Entrada/Saída rápidas por código de barras (sem escolher produto) -->
+    <div class="row g-2 mt-3">
+      <div class="col-12 col-lg-6">
+        <form method="post" action="{{ url_for('products.entrada', pid=0) }}" class="input-group input-group-sm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <span class="input-group-text"><i class="bi bi-box-arrow-in-down"></i></span>
+          <input class="form-control" type="text" name="barcode" placeholder="(scan) código"
+                 inputmode="numeric" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+          <input class="form-control" type="number" name="qtd" step="1" min="1" placeholder="+Qtd" required>
+          <input class="form-control" type="number" step="0.01" name="unit_cost" placeholder="Custo (opcional)">
+          <select class="form-select" name="reason" style="max-width: 140px;">
+            <option>Compra</option><option>Devolução</option><option>Ajuste</option><option>Outro</option>
+          </select>
+          <button class="btn btn-outline-success" type="submit" title="Entrada">Lançar</button>
+        </form>
+        <small class="text-muted">Se o código tiver <strong>pack</strong>, a quantidade será multiplicada automaticamente.</small>
+      </div>
+      <div class="col-12 col-lg-6">
+        <form method="post" action="{{ url_for('products.saida', pid=0) }}" class="input-group input-group-sm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <span class="input-group-text"><i class="bi bi-box-arrow-up"></i></span>
+          <input class="form-control" type="text" name="barcode" placeholder="(scan) código"
+                 inputmode="numeric" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+          <input class="form-control" type="number" name="qtd" step="1" min="1" placeholder="-Qtd" required>
+          <select class="form-select" name="reason" style="max-width: 140px;">
+            <option>Venda</option><option>Perda</option><option>Ajuste</option><option>Outro</option>
+          </select>
+          <button class="btn btn-outline-danger" type="submit" title="Saída">Lançar</button>
+        </form>
+        <small class="text-muted">Se o código tiver <strong>pack</strong>, a quantidade será multiplicada automaticamente.</small>
+      </div>
+    </div>
+  {% endif %}
+
   <div class="d-flex justify-content-between align-items-center mt-3">
     <h5 class="mb-0">Total de produtos: <span class="badge text-bg-secondary">{{ total }}</span></h5>
     {% if current_user.role in ['admin','operador'] %}
@@ -62,8 +113,19 @@
       <table class="table table-hover align-middle">
         <thead class="table-light">
           <tr>
-            <th>ID</th><th>SKU</th><th>Nome</th><th>Categoria</th><th>Fornecedor</th>
-            <th>Un</th><th>Preço</th><th>CMP</th><th>Margem</th><th>Qtd</th><th>Mín</th><th class="text-end">Ações</th>
+            <th>ID</th>
+            <th>SKU</th>
+            <th>Cód. barras</th>
+            <th>Nome</th>
+            <th>Categoria</th>
+            <th>Fornecedor</th>
+            <th>Un</th>
+            <th>Preço</th>
+            <th>CMP</th>
+            <th>Margem</th>
+            <th>Qtd</th>
+            <th>Mín</th>
+            <th class="text-end">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -71,6 +133,7 @@
           <tr>
             <td>{{ p.id }}</td>
             <td><span class="text-secondary">{{ p.sku }}</span></td>
+            <td class="font-monospace">{{ p.primary_barcode or '—' }}</td>
             <td><a class="link-underline link-underline-opacity-0" href="{{ url_for('products.produto', pid=p.id) }}">{{ p.name }}</a></td>
             <td>{{ p.category or '-' }}</td>
             <td>{{ p.supplier or '-' }}</td>
@@ -82,9 +145,12 @@
             <td>{{ p.min_qty }}</td>
             <td class="text-end table-actions">
               {% if current_user.role in ['admin','operador'] %}
+                <!-- ENTRADA: com suporte a barcode -->
                 <form class="d-inline" method="post" action="{{ url_for('products.entrada', pid=p.id) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <div class="input-group input-group-sm" style="width: 310px; max-width: 100%;">
+                  <div class="input-group input-group-sm" style="width: 420px; max-width: 100%;">
+                    <input class="form-control" type="text" name="barcode" placeholder="(scan) código"
+                           inputmode="numeric" autocapitalize="off" autocorrect="off" spellcheck="false">
                     <input class="form-control" type="number" name="qtd" step="1" min="1" placeholder="+Qtd">
                     <input class="form-control" type="number" step="0.01" name="unit_cost" placeholder="Custo">
                     <select class="form-select" name="reason">
@@ -93,9 +159,13 @@
                     <button class="btn btn-outline-success" type="submit" title="Entrada"><i class="bi bi-box-arrow-in-down"></i></button>
                   </div>
                 </form>
+
+                <!-- SAÍDA: com suporte a barcode -->
                 <form class="d-inline" method="post" action="{{ url_for('products.saida', pid=p.id) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <div class="input-group input-group-sm mt-1" style="width: 260px; max-width: 100%;">
+                  <div class="input-group input-group-sm mt-1" style="width: 360px; max-width: 100%;">
+                    <input class="form-control" type="text" name="barcode" placeholder="(scan) código"
+                           inputmode="numeric" autocapitalize="off" autocorrect="off" spellcheck="false">
                     <input class="form-control" type="number" name="qtd" step="1" min="1" placeholder="-Qtd">
                     <select class="form-select" name="reason">
                       <option>Venda</option><option>Perda</option><option>Ajuste</option><option>Outro</option>
@@ -103,6 +173,7 @@
                     <button class="btn btn-outline-danger" type="submit" title="Saída"><i class="bi bi-box-arrow-up"></i></button>
                   </div>
                 </form>
+
                 <a class="btn btn-outline-secondary btn-sm mt-1" href="{{ url_for('products.editar', pid=p.id) }}"><i class="bi bi-pencil-square"></i></a>
                 {% if current_user.role == 'admin' %}
                   <form class="d-inline" method="post" action="{{ url_for('products.excluir', pid=p.id) }}" onsubmit="return confirm('Excluir este produto e seu histórico?');">
