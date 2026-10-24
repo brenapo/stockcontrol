@@ -11,7 +11,7 @@ type OrderLike = {
   itemsText: string | null
   items: OrderItem[]
   amountCents: number | null
-  paymentMethod: 'cash' | 'zelle' | null
+  paymentMethod: 'cash' | 'zelle' | 'pending' | null
   driverName?: string | null
 }
 
@@ -37,13 +37,15 @@ export async function telegram(html: string): Promise<void> {
   }
 }
 
+const payLabel = (p: string) => (p === 'zelle' ? 'Zelle' : p === 'pending' ? '⏳ Payment pending' : 'Cash')
+
 export function orderMessage(o: OrderLike, title: string): string {
   const lines = [`🍭 <b>${escapeHtml(title)} #${o.code}</b>`]
   if (o.customerName) lines.push(`👤 ${escapeHtml(o.customerName)}`)
   if (o.address) lines.push(`📍 ${escapeHtml(o.address)}`)
   const items = itemsSummary(o)
   if (items) lines.push(`🛒 ${escapeHtml(items)}`)
-  const pay = [o.amountCents != null ? money(o.amountCents) : '', o.paymentMethod ? (o.paymentMethod === 'zelle' ? 'Zelle' : 'Cash') : '']
+  const pay = [o.amountCents != null ? money(o.amountCents) : '', o.paymentMethod ? payLabel(o.paymentMethod) : '']
     .filter(Boolean).join(' · ')
   if (pay) lines.push(`💵 ${pay}`)
   if (o.driverName) lines.push(`🚗 ${escapeHtml(o.driverName)}`)

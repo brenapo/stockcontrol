@@ -47,7 +47,7 @@ export function SplitEditor({ o, onSaved }: { o: Order; onSaved: () => void }) {
   return (
     <div className="space-y-3 rounded-3xl bg-sun-soft p-3">
       {field(`amt-${o.id}`, 'Collected', amount, setAmount)}
-      <Segmented<Pay> value={pay} onChange={setPay} options={[{ value: 'cash', label: 'Cash', icon: 'cash' }, { value: 'zelle', label: 'Zelle', icon: 'bank' }]} />
+      <Segmented<Pay> value={pay} onChange={setPay} options={[{ value: 'cash', label: 'Cash', icon: 'cash' }, { value: 'zelle', label: 'Zelle', icon: 'bank' }, { value: 'pending', label: 'Pending', icon: 'clock' }]} />
       <div className="grid grid-cols-2 gap-2">
         {field(`cut-${o.id}`, 'You keep', cut, setCut)}
         {field(`owed-${o.id}`, 'Pass to owner', owed, setOwed)}

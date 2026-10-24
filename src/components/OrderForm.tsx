@@ -182,7 +182,7 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
             <button type="button" className="btn btn-ghost btn-sm !min-h-[54px]" onClick={() => setAmount(fromCents(menuTotal))}>{money(menuTotal)}</button>
           )}
         </div>
-        <Segmented<Pay> value={pay} onChange={setPay} options={[{ value: 'cash', label: 'Cash', icon: 'cash' }, { value: 'zelle', label: 'Zelle', icon: 'bank' }]} />
+        <Segmented<Pay> value={pay} onChange={setPay} options={[{ value: 'cash', label: 'Cash', icon: 'cash' }, { value: 'zelle', label: 'Zelle', icon: 'bank' }, { value: 'pending', label: 'Pending', icon: 'clock' }]} />
         <div className="grid grid-cols-2 gap-2">
           {cutField}{owedField}
         </div>

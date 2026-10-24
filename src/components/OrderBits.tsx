@@ -42,7 +42,7 @@ export function Money({ o }: { o: Order }) {
   if (!hasAny) return null
   return (
     <div className="grid grid-cols-3 gap-2 text-center">
-      <Cell label="Collect" tone="bg-sun-soft" value={money(o.amountCents)} sub={o.paymentMethod ? (o.paymentMethod === 'zelle' ? 'Zelle' : 'Cash') : undefined} icon={o.paymentMethod === 'zelle' ? 'bank' : 'cash'} />
+      <Cell label="Collect" tone={o.paymentMethod === 'pending' ? 'bg-orange-soft' : 'bg-sun-soft'} value={money(o.amountCents)} sub={o.paymentMethod ? (o.paymentMethod === 'zelle' ? 'Zelle' : o.paymentMethod === 'pending' ? 'Pending' : 'Cash') : undefined} icon={o.paymentMethod === 'zelle' ? 'bank' : o.paymentMethod === 'pending' ? 'clock' : 'cash'} />
       <Cell label="You keep" tone="bg-mint-soft" value={money(o.driverCutCents)} />
       <Cell label="Pass to owner" tone="bg-grape-soft" value={money(o.ownerOwedCents)} />
     </div>

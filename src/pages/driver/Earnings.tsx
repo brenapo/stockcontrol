@@ -51,6 +51,7 @@ export default function Earnings({ summary: s, open, onChange }: { summary?: Tot
           <div className="flex items-center gap-2">
             <span className="text-sm font-black text-mute">#{o.code}</span>
             <span className="chip bg-sky-soft text-sky"><Icon name="clock" size={14} />{when(o.deliveredAt)}</span>
+            {o.paymentMethod === 'pending' && <span className="chip bg-orange-soft text-orange">Payment pending</span>}
           </div>
           <div className="text-lg font-black leading-tight">{o.customerName || o.address || 'Delivery'}</div>
           {summary(o) && <div className="text-base text-mute">{summary(o)}</div>}

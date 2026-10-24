@@ -80,16 +80,16 @@ export function Logo({ size = 40, text = true }: { size?: number; text?: boolean
 
 export function Segmented<T extends string>({ value, options, onChange }: { value: T | null; options: { value: T; label: string; icon?: string }[]; onChange: (v: T | null) => void }) {
   return (
-    <div className="grid grid-flow-col gap-2">
+    <div className="grid auto-cols-fr grid-flow-col gap-2">
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           onClick={() => onChange(value === o.value ? null : o.value)}
-          className={`btn btn-sm !min-h-[54px] ${value === o.value ? 'bg-pink text-white' : 'btn-ghost'}`}
+          className={`btn btn-sm !min-h-[54px] !px-2 ${value === o.value ? 'bg-pink text-white' : 'btn-ghost'}`}
           aria-pressed={value === o.value}
         >
-          {o.icon && <Icon name={o.icon} size={20} />}
+          {o.icon && options.length < 3 && <Icon name={o.icon} size={20} />}
           {o.label}
         </button>
       ))}

@@ -369,6 +369,8 @@ d('Sugar Rush API', () => {
     expect((await call('eve', 'POST', `/orders/${id}/split`, { driverCutCents: 2000 })).status).toBe(409) // not hers
     expect((await call('dan', 'POST', `/orders/${id}/split`, { driverCutCents: 800 })).json.order).toMatchObject({ driverCutCents: 800, ownerOwedCents: 1200 })
     expect((await call('dan', 'POST', `/orders/${id}/split`, { ownerOwedCents: 1000 })).json.order.ownerOwedCents).toBe(1000) // typed by hand
+    expect((await call('dan', 'POST', `/orders/${id}/split`, { paymentMethod: 'pending' })).json.order.paymentMethod).toBe('pending')
+    expect((await call('dan', 'POST', `/orders/${id}/split`, { paymentMethod: 'venmo' })).status).toBe(400)
     await call('dan', 'POST', `/orders/${id}/deliver`)
     await call('dan', 'POST', `/orders/${id}/clear`)
     expect((await call('dan', 'POST', `/orders/${id}/split`, { driverCutCents: 0 })).status).toBe(409) // settled = locked

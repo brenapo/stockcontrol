@@ -1,6 +1,6 @@
 export type Role = 'owner' | 'driver'
 export type Status = 'new' | 'taken' | 'delivered'
-export type Pay = 'cash' | 'zelle'
+export type Pay = 'cash' | 'zelle' | 'pending'
 
 export type User = { id: string; username: string; name: string; role: Role; phone: string | null }
 export type MenuItem = { id: number; letter: string; name: string; priceCents: number; active: boolean; allowNote: boolean; imageUrl: string; customImage: boolean }

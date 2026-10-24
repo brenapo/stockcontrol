@@ -32,13 +32,13 @@ const customerFields = {
 const ownerFields = {
   ...customerFields,
   amountCents: cents.nullish(),
-  paymentMethod: z.enum(['cash', 'zelle']).nullish(),
+  paymentMethod: z.enum(['cash', 'zelle', 'pending']).nullish(),
   driverCutCents: cents.nullish(),
   ownerOwedCents: z.number().int().min(-10_000_00).max(10_000_00).nullish(),
 }
 const ownerOrderCreate = z.object(ownerFields)
 // drivers log their own customers' deliveries: they set what they collected; the owner sets the split later
-const driverOrderCreate = z.object({ ...customerFields, amountCents: cents.nullish(), paymentMethod: z.enum(['cash', 'zelle']).nullish(), driverCutCents: cents.nullish(), ownerOwedCents: z.number().int().min(-10_000_00).max(10_000_00).nullish() })
+const driverOrderCreate = z.object({ ...customerFields, amountCents: cents.nullish(), paymentMethod: z.enum(['cash', 'zelle', 'pending']).nullish(), driverCutCents: cents.nullish(), ownerOwedCents: z.number().int().min(-10_000_00).max(10_000_00).nullish() })
 const ownerOrderPatch = z.object({
   ...ownerFields,
   status: z.enum(['new', 'taken', 'delivered']).optional(),
@@ -375,7 +375,7 @@ export const routes: Route[] = [
   // driver sets the money on their own delivery (until it is settled); the owner can still change it
   rt('POST', /^\/orders\/([0-9a-f-]{36})\/split$/, 'driver', async ({ params, body, user }) => {
     const b = z.object({
-      amountCents: cents.nullish(), paymentMethod: z.enum(['cash', 'zelle']).nullish(),
+      amountCents: cents.nullish(), paymentMethod: z.enum(['cash', 'zelle', 'pending']).nullish(),
       driverCutCents: cents.nullish(), ownerOwedCents: z.number().int().min(-10_000_00).max(10_000_00).nullish(),
     }).parse(body)
     const order = await db().transaction(async (tx) => {

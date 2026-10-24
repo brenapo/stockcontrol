@@ -59,7 +59,7 @@ export const orders = pgTable(
     itemsText: text('items_text'),
     items: jsonb('items').$type<OrderItem[]>().notNull().default([]),
     amountCents: integer('amount_cents'),
-    paymentMethod: text('payment_method', { enum: ['cash', 'zelle'] }),
+    paymentMethod: text('payment_method', { enum: ['cash', 'zelle', 'pending'] }),
     driverCutCents: integer('driver_cut_cents'),
     ownerOwedCents: integer('owner_owed_cents'),
     driverId: uuid('driver_id').references(() => users.id, { onDelete: 'set null' }),
