@@ -26,6 +26,7 @@ export type Order = {
   takenAt: string | null
   deliveredAt: string | null
   settledAt: string | null
+  settledBy?: string | null
   archivedAt: string | null
   createdAt: string
 }

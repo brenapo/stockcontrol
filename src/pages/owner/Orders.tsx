@@ -62,7 +62,7 @@ export default function Orders({ menu }: { menu: MenuItem[] }) {
           </div>
           {o.status === 'delivered' && o.driverId && (
             <button className={`btn btn-sm w-full ${o.settledAt ? 'bg-mint-soft text-mint-dark' : 'btn-grape'}`} onClick={() => act(() => api(`/orders/${o.id}/settle`, { body: { settled: !o.settledAt } }))}>
-              <Icon name="check" size={20} />{o.settledAt ? 'Settled' : 'Mark settled'}
+              <Icon name="check" size={20} />{o.settledAt ? `Settled${o.settledBy ? ` · ${o.settledBy}` : ''}` : 'Mark settled'}
             </button>
           )}
         </article>

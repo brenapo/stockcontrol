@@ -67,6 +67,7 @@ export const orders = pgTable(
     takenAt: timestamp('taken_at', { withTimezone: true }),
     deliveredAt: timestamp('delivered_at', { withTimezone: true }),
     settledAt: timestamp('settled_at', { withTimezone: true }),
+    settledBy: text('settled_by'), // who marked it settled (owner, or the driver clearing it)
     archivedAt: timestamp('archived_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

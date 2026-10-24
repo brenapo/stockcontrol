@@ -29,6 +29,13 @@
       "when": 1792910000000,
       "tag": "0003_half_quantities",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792920000000,
+      "tag": "0004_settled_by",
+      "breakpoints": true
     }
   ]
 }

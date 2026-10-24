@@ -7,7 +7,7 @@ import { OrderForm } from '../../components/OrderForm'
 import { Empty, Spinner, useToast } from '../../components/ui'
 import type { MenuItem, Order } from '../../types'
 
-export default function Mine({ orders, done, menu, onChange, startAdding = false }: { orders?: Order[]; done: Order[]; menu: MenuItem[]; onChange: () => void; startAdding?: boolean }) {
+export default function Mine({ orders, menu, onChange, startAdding = false }: { orders?: Order[]; menu: MenuItem[]; onChange: () => void; startAdding?: boolean }) {
   const { toast, fail } = useToast()
   const [sel, setSel] = useState<string[]>([])
   const [busy, setBusy] = useState<string | null>(null)
@@ -62,22 +62,12 @@ export default function Mine({ orders, done, menu, onChange, startAdding = false
           <Money o={o} />
           <div className="grid grid-cols-[1fr_auto] gap-2"><ContactButtons phone={o.phone} /><MapsButton address={o.address} /></div>
           <div className="grid grid-cols-[1fr_auto] gap-2">
-            <button className="btn btn-mint" disabled={busy === o.id} onClick={() => act(o, 'deliver', 'Delivered!')}><Icon name="check" />Delivered</button>
+            <button className="btn btn-mint" disabled={busy === o.id} onClick={() => act(o, 'deliver', 'Delivered! · in Earnings')}><Icon name="check" />Delivered</button>
             <button className="btn btn-ghost btn-sm !min-h-[54px]" disabled={busy === o.id} onClick={() => act(o, 'release', 'Released')} aria-label="Give back"><Icon name="x" /></button>
           </div>
         </article>
       ))}
 
-      {done.length > 0 && (
-        <details className="card">
-          <summary className="cursor-pointer text-lg font-extrabold">Delivered · {done.length}</summary>
-          <ul className="mt-2 divide-y divide-line">
-            {done.map((o) => (
-              <li key={o.id} className="py-2 text-base"><span className="font-black text-mute">#{o.code}</span> {o.customerName || o.address || '—'}</li>
-            ))}
-          </ul>
-        </details>
-      )}
 
       {sel.length > 0 && (
         <div className="fixed inset-x-0 z-20 p-3" style={{ bottom: 'calc(64px + env(safe-area-inset-bottom))' }}>

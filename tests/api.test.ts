@@ -361,6 +361,20 @@ d('Sugar Rush API', () => {
     expect(p.json.order).toMatchObject({ driverCutCents: 300, ownerOwedCents: 600 })
   })
 
+  it('Earnings: delivered orders wait with their date until the driver clears them', async () => {
+    const me = (await call('dan', 'GET', '/payouts/me')).json
+    expect(me.open.length).toBeGreaterThan(0)
+    expect(me.open.every((o: any) => o.status === 'delivered' && o.deliveredAt && !o.settledAt)).toBe(true)
+    const first = me.open[0]
+    expect((await call('eve', 'POST', `/orders/${first.id}/clear`)).status).toBe(409) // not hers
+    expect((await call('dan', 'POST', `/orders/${first.id}/clear`)).json.order).toMatchObject({ settledBy: 'Dan' })
+    expect((await call('dan', 'POST', `/orders/${first.id}/clear`)).status).toBe(409) // already cleared
+    expect((await call('dan', 'GET', '/payouts/me')).json.open.map((o: any) => o.id)).not.toContain(first.id)
+    await call('dan', 'POST', '/payouts/me/clear')
+    expect((await call('dan', 'GET', '/payouts/me')).json.open).toHaveLength(0)
+    expect((await call('dan', 'POST', '/payouts/me/clear', undefined)).status).toBe(200)
+  })
+
   it('quantities go in steps of 0.5 for orders and stock', async () => {
     // eve sets her Éclair (item 3) stock to 4, then logs a delivery of 1.5
     expect((await call('eve', 'POST', '/stock/adjust', { itemId: 3, set: 4 })).json.qty).toBe(4)

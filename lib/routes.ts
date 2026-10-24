@@ -80,7 +80,7 @@ const serialize = (o: typeof orders.$inferSelect) => ({
   amountCents: o.amountCents, paymentMethod: o.paymentMethod,
   driverCutCents: o.driverCutCents, ownerOwedCents: o.ownerOwedCents,
   driverId: o.driverId, driverName: o.driverName,
-  takenAt: o.takenAt, deliveredAt: o.deliveredAt, settledAt: o.settledAt, archivedAt: o.archivedAt, createdAt: o.createdAt,
+  takenAt: o.takenAt, deliveredAt: o.deliveredAt, settledAt: o.settledAt, settledBy: o.settledBy, archivedAt: o.archivedAt, createdAt: o.createdAt,
 })
 
 const need = <T>(v: T | undefined, msg = 'Not found'): T => {
@@ -316,8 +316,8 @@ export const routes: Route[] = [
         if (cur.status === 'new' && b.status === undefined) { set.status = 'taken'; set.takenAt = new Date() }
       }
       if (b.driverId === null) { set.driverId = null; set.driverName = null; if (cur.status === 'taken' && !b.status) { set.status = 'new'; set.takenAt = null } }
-      if (b.status === 'new') Object.assign(set, { status: 'new', driverId: null, driverName: null, takenAt: null, deliveredAt: null, settledAt: null })
-      if (b.status === 'taken') { set.status = 'taken'; set.deliveredAt = null; set.settledAt = null; set.takenAt = cur.takenAt ?? new Date() }
+      if (b.status === 'new') Object.assign(set, { status: 'new', driverId: null, driverName: null, takenAt: null, deliveredAt: null, settledAt: null, settledBy: null })
+      if (b.status === 'taken') { set.status = 'taken'; set.deliveredAt = null; set.settledAt = null; set.settledBy = null; set.takenAt = cur.takenAt ?? new Date() }
       if (b.status === 'delivered') { set.status = 'delivered'; set.deliveredAt = cur.deliveredAt ?? new Date(); set.takenAt = cur.takenAt ?? new Date() }
 
       const finalStatus = set.status ?? cur.status
@@ -351,9 +351,9 @@ export const routes: Route[] = [
     return { order: serialize(need(o)) }
   }),
 
-  rt('POST', /^\/orders\/([0-9a-f-]{36})\/settle$/, 'owner', async ({ params, body }) => {
+  rt('POST', /^\/orders\/([0-9a-f-]{36})\/settle$/, 'owner', async ({ params, body, user }) => {
     const { settled } = z.object({ settled: z.boolean().default(true) }).parse(body)
-    const [o] = await db().update(orders).set({ settledAt: settled ? new Date() : null })
+    const [o] = await db().update(orders).set({ settledAt: settled ? new Date() : null, settledBy: settled ? user!.name : null })
       .where(and(eq(orders.id, params[0]), eq(orders.status, 'delivered'))).returning()
     return { order: serialize(need(o)) }
   }),
@@ -367,6 +367,16 @@ export const routes: Route[] = [
       .returning()
     if (!o) throw new HttpError(409, 'Someone else already took it')
     await Promise.allSettled([notifyStatus(o, 'taken'), push('owner', { title: `🚗 ${user!.name} took #${o.code}`, url: '/app', tag: `o-${o.id}` })])
+    return { order: serialize(o) }
+  }),
+
+  // driver: "I settled this one with the owner" — clears it from Earnings
+  rt('POST', /^\/orders\/([0-9a-f-]{36})\/clear$/, 'driver', async ({ params, user }) => {
+    const [o] = await db().update(orders).set({ settledAt: new Date(), settledBy: user!.name })
+      .where(and(eq(orders.id, params[0]), eq(orders.driverId, user!.id), eq(orders.status, 'delivered'), isNull(orders.settledAt)))
+      .returning()
+    if (!o) throw new HttpError(409, 'Already cleared')
+    await push('owner', { title: `💵 ${user!.name} cleared #${o.code}`, body: o.ownerOwedCents != null ? `Owed to you: $${(o.ownerOwedCents / 100).toFixed(2)}` : undefined, url: '/app', tag: `clear-${user!.id}` }).catch(() => {})
     return { order: serialize(o) }
   }),
 
@@ -425,14 +435,28 @@ export const routes: Route[] = [
     const [r] = await payoutRows(user!.id)
     const z0 = { dayKept: 0, dayOwed: 0, dayCount: 0, weekKept: 0, weekOwed: 0, weekCount: 0, openKept: 0, openOwed: 0, openCount: 0 }
     const { driverId: _d, driverName: _n, ...rest } = r ?? { ...z0, driverId: null, driverName: '' }
-    return { summary: rest }
+    const open = await db().select().from(orders)
+      .where(and(eq(orders.driverId, user!.id), eq(orders.status, 'delivered'), isNull(orders.settledAt)))
+      .orderBy(desc(orders.deliveredAt)).limit(300)
+    return { summary: rest, open: open.map(serialize) }
+  }),
+
+  rt('POST', /^\/payouts\/me\/clear$/, 'driver', async ({ user }) => {
+    const rows = await db().update(orders).set({ settledAt: new Date(), settledBy: user!.name })
+      .where(and(eq(orders.driverId, user!.id), eq(orders.status, 'delivered'), isNull(orders.settledAt)))
+      .returning({ owed: orders.ownerOwedCents })
+    if (rows.length) {
+      const owed = rows.reduce((s, r) => s + (r.owed ?? 0), 0)
+      await push('owner', { title: `💵 ${user!.name} cleared ${rows.length} deliveries`, body: `Owed to you: $${(owed / 100).toFixed(2)}`, url: '/app', tag: `clear-${user!.id}` }).catch(() => {})
+    }
+    return { cleared: rows.length }
   }),
 
   rt('GET', /^\/payouts$/, 'owner', async () => ({ drivers: (await payoutRows()).filter((r) => r.driverId) })),
 
-  rt('POST', /^\/payouts\/settle$/, 'owner', async ({ body }) => {
+  rt('POST', /^\/payouts\/settle$/, 'owner', async ({ body, user }) => {
     const { driverId } = z.object({ driverId: z.string().uuid() }).parse(body)
-    const rows = await db().update(orders).set({ settledAt: new Date() })
+    const rows = await db().update(orders).set({ settledAt: new Date(), settledBy: user!.name })
       .where(and(eq(orders.driverId, driverId), eq(orders.status, 'delivered'), isNull(orders.settledAt))).returning({ id: orders.id })
     return { settled: rows.length }
   }),
