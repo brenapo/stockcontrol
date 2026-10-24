@@ -4,9 +4,9 @@ import { money, summary, timeAgo } from '../format'
 import type { Order, Status } from '../types'
 
 const STATUS: Record<Status, { label: string; cls: string }> = {
-  new: { label: 'New', cls: 'bg-pink-soft text-pink-dark dark:text-pink' },
+  new: { label: 'New', cls: 'bg-pink-soft text-pink-dark' },
   taken: { label: 'Taken', cls: 'bg-sky-soft text-sky' },
-  delivered: { label: 'Delivered', cls: 'bg-mint-soft text-mint-dark dark:text-mint' },
+  delivered: { label: 'Delivered', cls: 'bg-mint-soft text-mint-dark' },
 }
 
 export function StatusChip({ o }: { o: Order }) {

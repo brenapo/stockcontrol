@@ -92,3 +92,6 @@ export async function push(audience: 'all' | 'owner', payload: { title: string; 
   )
   if (dead.length) await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.endpoint, dead))
 }
+
+export const notifyLowStock = (name: string, qty: number, threshold: number) =>
+  telegram(`⚠️ <b>Low stock</b>\n${escapeHtml(name)}: <b>${qty}</b> left in the store (alert at ${threshold} or less)`)

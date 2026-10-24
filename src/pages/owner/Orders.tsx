@@ -61,7 +61,7 @@ export default function Orders({ menu }: { menu: MenuItem[] }) {
             <button className="btn btn-sm btn-ghost text-red-600" onClick={() => remove(o)} aria-label="Delete"><Icon name="trash" size={20} /></button>
           </div>
           {o.status === 'delivered' && o.driverId && (
-            <button className={`btn btn-sm w-full ${o.settledAt ? 'bg-mint-soft text-mint-dark dark:text-mint' : 'btn-grape'}`} onClick={() => act(() => api(`/orders/${o.id}/settle`, { body: { settled: !o.settledAt } }))}>
+            <button className={`btn btn-sm w-full ${o.settledAt ? 'bg-mint-soft text-mint-dark' : 'btn-grape'}`} onClick={() => act(() => api(`/orders/${o.id}/settle`, { body: { settled: !o.settledAt } }))}>
               <Icon name="check" size={20} />{o.settledAt ? 'Settled' : 'Mark settled'}
             </button>
           )}

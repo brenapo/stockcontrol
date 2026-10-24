@@ -2,22 +2,23 @@ import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, or, sql, type S
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 import { getDb } from './db.js'
-import { HttpError, json, type Ctx, type Route } from './http.js'
+import { HttpError, json, rt, type Route } from './http.js'
 import { itemsSummary, notifyNewOrder, notifyStatus, push } from './notify.js'
-import { menuItems, orders, pushSubscriptions, users, type OrderItem } from './schema.js'
+import { menuItems, orders, pushSubscriptions, stock, users, type OrderItem } from './schema.js'
 import {
   checkFormToken, clearCookie, createSession, destroySession, destroyUserSessions, hashPassword, hit,
   makeFormToken, readCookie, COOKIE_NAME, sessionCookie, verifyPassword,
 } from './security.js'
-import { clean, digits } from './util.js'
+import { applyDelivery, alertLow, transfer, skuFor, STORE, type Actor } from './stock.js'
+import { stockRoutes } from './stockRoutes.js'
+import { clean, digits, STORE_TZ } from './util.js'
 
 const db = () => getDb()
-const rt = (method: string, pattern: RegExp, access: Route['access'], handler: Route['handler']): Route => ({ method, pattern, access, handler })
 
 // ---------- shared validation ----------
 const cents = z.number().int().min(0).max(10_000_00)
 const text = (max: number) => z.string().max(max).nullish()
-const itemRef = z.object({ id: z.number().int(), qty: z.number().int().min(1).max(99) })
+const itemRef = z.object({ id: z.number().int(), qty: z.number().int().min(1).max(99), note: z.string().max(80).nullish() })
 
 const customerFields = {
   customerName: text(120),
@@ -42,17 +43,20 @@ const ownerOrderPatch = z.object({
 })
 const publicOrder = z.object({ ...customerFields, token: z.string().max(200), website: z.string().max(200).optional() })
 
-async function snapshotItems(refs: { id: number; qty: number }[]): Promise<OrderItem[]> {
+async function snapshotItems(refs: { id: number; qty: number; note?: string | null }[]): Promise<OrderItem[]> {
   if (!refs.length) return []
-  const rows = await db().select().from(menuItems).where(and(inArray(menuItems.id, refs.map((r) => r.id)), eq(menuItems.active, true)))
+  const rows = await db().select().from(menuItems).where(and(inArray(menuItems.id, refs.map((r) => r.id)), eq(menuItems.active, true), eq(menuItems.retired, false)))
   const byId = new Map(rows.map((r) => [r.id, r]))
-  const merged = new Map<number, number>()
-  for (const r of refs) merged.set(r.id, Math.min(99, (merged.get(r.id) ?? 0) + r.qty))
-  return [...merged].map(([id, qty]) => {
-    const m = byId.get(id)
+  const merged = new Map<string, OrderItem>()
+  for (const r of refs) {
+    const m = byId.get(r.id)
     if (!m) throw new HttpError(400, 'An item in your order is no longer available')
-    return { id, name: m.name, qty, priceCents: m.priceCents }
-  })
+    const { sku, name } = skuFor(m, r.note)
+    const cur = merged.get(sku)
+    if (cur) cur.qty = Math.min(99, cur.qty + r.qty)
+    else merged.set(sku, { id: m.id, sku, name, qty: r.qty, priceCents: m.priceCents, ...(m.allowNote && name !== m.name ? { note: name } : {}) })
+  }
+  return [...merged.values()]
 }
 
 type TextIn = { customerName?: string | null; phone?: string | null; address?: string | null; notes?: string | null; itemsText?: string | null }
@@ -82,10 +86,7 @@ const need = <T>(v: T | undefined, msg = 'Not found'): T => {
 }
 
 // ---------- timezone helpers for payout summaries ----------
-const tz = (() => {
-  const t = process.env.STORE_TZ || 'America/New_York'
-  try { new Intl.DateTimeFormat('en', { timeZone: t }); return t } catch { return 'America/New_York' }
-})()
+const tz = STORE_TZ
 const dayStart = sql`(date_trunc('day', now() AT TIME ZONE ${tz}::text) AT TIME ZONE ${tz}::text)`
 const weekStart = sql`(date_trunc('week', now() AT TIME ZONE ${tz}::text) AT TIME ZONE ${tz}::text)`
 
@@ -124,7 +125,7 @@ function validImage(dataUrl: string): boolean {
 }
 
 const menuView = (m: typeof menuItems.$inferSelect) => ({
-  id: m.id, letter: m.letter, name: m.name, priceCents: m.priceCents, active: m.active,
+  id: m.id, letter: m.letter, name: m.name, priceCents: m.priceCents, active: m.active, allowNote: m.allowNote,
   imageUrl: m.imageData ? `/api/menu-image/${m.id}?v=${m.imageVersion}` : `/candy/${m.letter.toLowerCase()}.svg`,
   customImage: !!m.imageData,
 })
@@ -136,7 +137,7 @@ const publicUser = (u: { id: string; username: string; name: string; role: strin
 export const routes: Route[] = [
   // ----- public -----
   rt('GET', /^\/menu$/, 'public', async ({ res }) => {
-    const rows = await db().select().from(menuItems).where(eq(menuItems.active, true)).orderBy(menuItems.sortOrder)
+    const rows = await db().select().from(menuItems).where(and(eq(menuItems.active, true), eq(menuItems.retired, false))).orderBy(menuItems.sortOrder)
     res.setHeader('cache-control', 'public, max-age=15')
     return { items: rows.map(menuView) }
   }),
@@ -261,37 +262,58 @@ export const routes: Route[] = [
     return { archived: rows.length }
   }),
 
-  rt('PATCH', /^\/orders\/([0-9a-f-]{36})$/, 'owner', async ({ params, body }) => {
+  rt('PATCH', /^\/orders\/([0-9a-f-]{36})$/, 'owner', async ({ params, body, user }) => {
     const b = ownerOrderPatch.parse(body)
-    const [cur] = await db().select().from(orders).where(eq(orders.id, params[0]))
-    need(cur)
-    const set: Partial<typeof orders.$inferInsert> = textFields(b)
-    if (b.items !== undefined) set.items = await snapshotItems(b.items)
-    if (b.amountCents !== undefined) set.amountCents = b.amountCents
-    if (b.paymentMethod !== undefined) set.paymentMethod = b.paymentMethod
-    if (b.driverCutCents !== undefined) set.driverCutCents = b.driverCutCents
-    if (b.ownerOwedCents !== undefined) set.ownerOwedCents = b.ownerOwedCents
-    else if (b.amountCents !== undefined || b.driverCutCents !== undefined) {
-      const a = set.amountCents ?? cur.amountCents
-      set.ownerOwedCents = a != null ? a - (set.driverCutCents ?? cur.driverCutCents ?? 0) : null
-    }
-    if (b.driverId !== undefined && b.driverId !== null) {
-      const [d] = await db().select().from(users).where(and(eq(users.id, b.driverId), eq(users.role, 'driver'), isNull(users.deletedAt)))
-      need(d, 'Driver not found')
-      set.driverId = d.id
-      set.driverName = d.name
-      if (cur.status === 'new' && b.status === undefined) { set.status = 'taken'; set.takenAt = new Date() }
-    }
-    if (b.driverId === null) { set.driverId = null; set.driverName = null; if (cur.status === 'taken' && !b.status) { set.status = 'new'; set.takenAt = null } }
-    if (b.status === 'new') Object.assign(set, { status: 'new', driverId: null, driverName: null, takenAt: null, deliveredAt: null, settledAt: null })
-    if (b.status === 'taken') { set.status = 'taken'; set.deliveredAt = null; set.settledAt = null; set.takenAt = cur.takenAt ?? new Date() }
-    if (b.status === 'delivered') { set.status = 'delivered'; set.deliveredAt = cur.deliveredAt ?? new Date(); set.takenAt = cur.takenAt ?? new Date() }
-    const [o] = await db().update(orders).set(set).where(eq(orders.id, params[0])).returning()
-    return { order: serialize(o) }
+    const actor: Actor = { id: user!.id, name: user!.name }
+    const newItems = b.items !== undefined ? await snapshotItems(b.items) : undefined
+    const order = await db().transaction(async (tx) => {
+      const [cur] = await tx.select().from(orders).where(eq(orders.id, params[0])).for('update')
+      need(cur)
+      if (newItems && cur.status === 'delivered') throw new HttpError(400, 'Items of a delivered order are locked — set it back to Taken first')
+      const set: Partial<typeof orders.$inferInsert> = textFields(b)
+      if (newItems) set.items = newItems
+      if (b.amountCents !== undefined) set.amountCents = b.amountCents
+      if (b.paymentMethod !== undefined) set.paymentMethod = b.paymentMethod
+      if (b.driverCutCents !== undefined) set.driverCutCents = b.driverCutCents
+      if (b.ownerOwedCents !== undefined) set.ownerOwedCents = b.ownerOwedCents
+      else if (b.amountCents !== undefined || b.driverCutCents !== undefined) {
+        const a = set.amountCents ?? cur.amountCents
+        set.ownerOwedCents = a != null ? a - (set.driverCutCents ?? cur.driverCutCents ?? 0) : null
+      }
+      if (b.driverId !== undefined && b.driverId !== null) {
+        const [d] = await tx.select().from(users).where(and(eq(users.id, b.driverId), eq(users.role, 'driver'), isNull(users.deletedAt)))
+        need(d, 'Driver not found')
+        set.driverId = d.id
+        set.driverName = d.name
+        if (cur.status === 'new' && b.status === undefined) { set.status = 'taken'; set.takenAt = new Date() }
+      }
+      if (b.driverId === null) { set.driverId = null; set.driverName = null; if (cur.status === 'taken' && !b.status) { set.status = 'new'; set.takenAt = null } }
+      if (b.status === 'new') Object.assign(set, { status: 'new', driverId: null, driverName: null, takenAt: null, deliveredAt: null, settledAt: null })
+      if (b.status === 'taken') { set.status = 'taken'; set.deliveredAt = null; set.settledAt = null; set.takenAt = cur.takenAt ?? new Date() }
+      if (b.status === 'delivered') { set.status = 'delivered'; set.deliveredAt = cur.deliveredAt ?? new Date(); set.takenAt = cur.takenAt ?? new Date() }
+
+      const finalStatus = set.status ?? cur.status
+      const finalDriver = 'driverId' in set ? (set.driverId ?? null) : cur.driverId
+      const wasDelivered = cur.status === 'delivered'
+      const willDeliver = finalStatus === 'delivered' && !!finalDriver
+      const sameDelivery = wasDelivered && willDeliver && finalDriver === cur.driverId
+      // keep the driver's stock in step with delivery status changes
+      if (wasDelivered && !sameDelivery) await applyDelivery(tx, cur, 'revert', actor)
+      if (willDeliver && !sameDelivery) await applyDelivery(tx, { ...cur, items: set.items ?? cur.items }, 'deliver', actor, finalDriver)
+
+      const [o] = await tx.update(orders).set(set).where(eq(orders.id, params[0])).returning()
+      return o
+    })
+    return { order: serialize(order) }
   }),
 
-  rt('DELETE', /^\/orders\/([0-9a-f-]{36})$/, 'owner', async ({ params }) => {
-    await db().delete(orders).where(eq(orders.id, params[0]))
+  rt('DELETE', /^\/orders\/([0-9a-f-]{36})$/, 'owner', async ({ params, user }) => {
+    await db().transaction(async (tx) => {
+      const [cur] = await tx.select().from(orders).where(eq(orders.id, params[0])).for('update')
+      if (!cur) return
+      if (cur.status === 'delivered') await applyDelivery(tx, cur, 'revert', { id: user!.id, name: user!.name }) // give the sweets back
+      await tx.delete(orders).where(eq(orders.id, params[0]))
+    })
     return { ok: true }
   }),
 
@@ -332,13 +354,21 @@ export const routes: Route[] = [
 
   rt('POST', /^\/orders\/([0-9a-f-]{36})\/deliver$/, 'user', async ({ params, user }) => {
     const mine = user!.role === 'driver' ? eq(orders.driverId, user!.id) : undefined
-    const [o] = await db().update(orders)
-      .set({ status: 'delivered', deliveredAt: new Date() })
-      .where(and(eq(orders.id, params[0]), eq(orders.status, 'taken'), mine))
-      .returning()
-    if (!o) throw new HttpError(409, 'Cannot mark this delivery as delivered')
+    const actor: Actor = { id: user!.id, name: user!.name }
+    // status change and stock deduction commit together (or not at all); a repeat tap finds no 'taken' row and does nothing
+    const res = await db().transaction(async (tx) => {
+      const [o] = await tx.update(orders)
+        .set({ status: 'delivered', deliveredAt: new Date() })
+        .where(and(eq(orders.id, params[0]), eq(orders.status, 'taken'), mine))
+        .returning()
+      if (!o) return null
+      const negative = await applyDelivery(tx, o, 'deliver', actor)
+      return { o, negative }
+    })
+    if (!res) throw new HttpError(409, 'Cannot mark this delivery as delivered')
+    const { o, negative } = res
     await Promise.allSettled([notifyStatus(o, 'delivered'), push('owner', { title: `✅ #${o.code} delivered`, body: o.driverName ?? undefined, url: '/app', tag: `o-${o.id}` })])
-    return { order: serialize(o) }
+    return { order: serialize(o), negative }
   }),
 
   // ----- customers (owner): repeat last order -----
@@ -381,7 +411,7 @@ export const routes: Route[] = [
 
   // ----- menu admin -----
   rt('GET', /^\/admin\/menu$/, 'owner', async () => {
-    const rows = await db().select().from(menuItems).orderBy(menuItems.sortOrder)
+    const rows = await db().select().from(menuItems).where(eq(menuItems.retired, false)).orderBy(menuItems.sortOrder)
     return { items: rows.map(menuView) }
   }),
 
@@ -447,7 +477,7 @@ export const routes: Route[] = [
     return { ok: true }
   }),
 
-  rt('DELETE', /^\/users\/([0-9a-f-]{36})$/, 'owner', async ({ params }) => {
+  rt('DELETE', /^\/users\/([0-9a-f-]{36})$/, 'owner', async ({ params, user }) => {
     const [u] = await db().update(users).set({ deletedAt: new Date() })
       .where(and(eq(users.id, params[0]), eq(users.role, 'driver'), isNull(users.deletedAt))).returning({ id: users.id })
     need(u)
@@ -456,6 +486,15 @@ export const routes: Route[] = [
     // deliveries the driver had claimed but not finished go back to the open list
     await db().update(orders).set({ status: 'new', driverId: null, driverName: null, takenAt: null })
       .where(and(eq(orders.driverId, u.id), eq(orders.status, 'taken')))
+    // whatever the driver was carrying goes back to the store
+    const changes = await db().transaction(async (tx) => {
+      const rows = await tx.select().from(stock).where(eq(stock.holder, u.id)).for('update')
+      const moves = rows.filter((r) => r.qty > 0).map((r) => ({ sku: r.sku, name: r.name, qty: r.qty }))
+      const c = moves.length ? await transfer(tx, { id: user!.id, name: user!.name }, u.id, STORE, moves) : []
+      await tx.delete(stock).where(eq(stock.holder, u.id))
+      return c
+    })
+    await alertLow(changes)
     return { ok: true }
   }),
 
@@ -478,5 +517,7 @@ export const routes: Route[] = [
     return { ok: true }
   }),
 ]
+
+routes.push(...stockRoutes)
 
 export { json }

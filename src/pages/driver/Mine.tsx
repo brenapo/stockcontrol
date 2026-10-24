@@ -17,7 +17,13 @@ export default function Mine({ orders, done, onChange }: { orders?: Order[]; don
   const act = async (o: Order, path: 'deliver' | 'release', msg: string) => {
     if (path === 'release' && !confirm('Give this delivery back?')) return
     setBusy(o.id)
-    try { await api(`/orders/${o.id}/${path}`, { method: 'POST' }); toast(msg); onChange() } catch (e) { fail(e); onChange() } finally { setBusy(null) }
+    try {
+      const r = await api<{ negative?: { name: string; qty: number }[] }>(`/orders/${o.id}/${path}`, { method: 'POST' })
+      // delivery always goes through; if the driver was short on stock the owner sees it in red
+      if (r.negative?.length) toast(`Delivered · ${r.negative.map((n) => `${n.name} ${n.qty}`).join(', ')} in stock`, 'err')
+      else toast(msg)
+      onChange()
+    } catch (e) { fail(e); onChange() } finally { setBusy(null) }
   }
   const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
 

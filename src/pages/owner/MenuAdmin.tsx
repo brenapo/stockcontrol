@@ -60,7 +60,7 @@ function Row({ item, reload }: { item: MenuItem; reload: () => void }) {
           ) : (
             <>
               {item.customImage && <button className="btn btn-ghost btn-sm !w-11 !px-0" disabled={busy} onClick={() => put({ image: null }, 'Image reset')} aria-label="Reset image"><Icon name="refresh" size={20} /></button>}
-              <button className={`btn btn-sm !w-11 !px-0 ${item.active ? 'bg-mint-soft text-mint-dark dark:text-mint' : 'btn-ghost'}`} disabled={busy} onClick={() => put({ active: !item.active })} aria-label={item.active ? 'Hide' : 'Show'} aria-pressed={item.active}><Icon name="check" size={20} /></button>
+              <button className={`btn btn-sm !w-11 !px-0 ${item.active ? 'bg-mint-soft text-mint-dark' : 'btn-ghost'}`} disabled={busy} onClick={() => put({ active: !item.active })} aria-label={item.active ? 'Hide' : 'Show'} aria-pressed={item.active}><Icon name="check" size={20} /></button>
             </>
           )}
         </div>

@@ -1,6 +1,6 @@
 // Sugar Rush service worker: offline app shell + push notifications.
 // API responses are never cached (they contain customer data).
-const VERSION = 'v1'
+const VERSION = 'v2'
 const SHELL = `sr-shell-${VERSION}`
 const ASSETS = `sr-assets-${VERSION}`
 

@@ -70,3 +70,5 @@ export async function dispatch(routes: Route[], req: Req, res: Res): Promise<voi
     json(res, 500, { error: 'Something went wrong' })
   }
 }
+
+export const rt = (method: string, pattern: RegExp, access: Access, handler: Route['handler']): Route => ({ method, pattern, access, handler })

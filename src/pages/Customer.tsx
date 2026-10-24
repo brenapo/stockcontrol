@@ -7,9 +7,10 @@ import { money } from '../format'
 import type { MenuItem } from '../types'
 
 type Details = { name: string; phone: string; address: string; notes: string }
+type Saved = { cart: Record<number, number>; sweets?: Record<number, string>; details: Details }
 const LAST_KEY = 'sr:last-order'
 
-function loadLast(): { cart: Record<number, number>; details: Details } | null {
+function loadLast(): Saved | null {
   try { return JSON.parse(localStorage.getItem(LAST_KEY) ?? 'null') } catch { return null }
 }
 
@@ -17,6 +18,7 @@ export default function Customer() {
   const { fail } = useToast()
   const [menu, setMenu] = useState<MenuItem[] | null>(null)
   const [cart, setCart] = useState<Record<number, number>>({})
+  const [which, setWhich] = useState<Record<number, string>>({}) // "Other": which sweet
   const [details, setDetails] = useState<Details>(() => loadLast()?.details ?? { name: '', phone: '', address: '', notes: '' })
   const [token, setToken] = useState('')
   const [tokenAt, setTokenAt] = useState(0)
@@ -44,6 +46,7 @@ export default function Customer() {
     if (!last || !menu) return
     const ids = new Set(menu.map((m) => m.id))
     setCart(Object.fromEntries(Object.entries(last.cart).filter(([id]) => ids.has(Number(id)))) as Record<number, number>)
+    setWhich(last.sweets ?? {})
     setDetails(last.details)
     setOpen(true)
   }
@@ -63,14 +66,15 @@ export default function Customer() {
         body: {
           token: tk, website: honey,
           customerName: details.name, phone: details.phone, address: details.address, notes: details.notes,
-          items: Object.entries(cart).map(([id, qty]) => ({ id: Number(id), qty })),
+          items: Object.entries(cart).map(([id, qty]) => ({ id: Number(id), qty, note: which[Number(id)] || null })),
         },
       })
-      const snapshot = { cart, details }
+      const snapshot: Saved = { cart, sweets: which, details }
       try { localStorage.setItem(LAST_KEY, JSON.stringify(snapshot)) } catch { /* private mode */ }
       setLast(snapshot)
       setDone(r.code)
       setCart({})
+      setWhich({})
       setOpen(false)
     } catch (e) {
       fail(e)
@@ -84,7 +88,7 @@ export default function Customer() {
       <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-5 p-6 text-center">
         <div className="grid h-28 w-28 place-items-center rounded-full bg-mint-soft text-mint-dark"><Icon name="check" size={64} /></div>
         <h1 className="text-4xl font-black">Order sent!</h1>
-        {done > 0 && <div className="chip bg-pink-soft text-xl text-pink-dark dark:text-pink">#{done}</div>}
+        {done > 0 && <div className="chip bg-pink-soft text-xl text-pink-dark">#{done}</div>}
         <button className="btn btn-pink w-full" onClick={() => setDone(null)}><Icon name="plus" />New order</button>
       </main>
     )
@@ -111,7 +115,7 @@ export default function Customer() {
                 </button>
                 <div className="flex items-baseline justify-between px-1">
                   <span className="truncate text-lg font-black">{m.name}</span>
-                  <span className="font-extrabold text-pink-dark dark:text-pink">{money(m.priceCents)}</span>
+                  <span className="font-extrabold text-pink-dark">{money(m.priceCents)}</span>
                 </div>
                 {q === 0 ? (
                   <button className="btn btn-pink btn-sm w-full" onClick={() => set(m.id, 1)}><Icon name="plus" />Add</button>
@@ -121,6 +125,9 @@ export default function Customer() {
                     <span className="text-center text-2xl font-black">{q}</span>
                     <button className="btn btn-pink btn-sm !px-0" onClick={() => set(m.id, 1)} aria-label="More"><Icon name="plus" /></button>
                   </div>
+                )}
+                {q > 0 && m.allowNote && (
+                  <input className="field !min-h-[46px] !rounded-xl !text-base" placeholder="Which sweet?" maxLength={40} value={which[m.id] ?? ''} onChange={(e) => setWhich({ ...which, [m.id]: e.target.value })} aria-label="Which sweet?" />
                 )}
               </div>
             )
@@ -147,9 +154,13 @@ export default function Customer() {
           <div className="space-y-3">
             <div className="space-y-1">
               {(menu ?? []).filter((m) => cart[m.id]).map((m) => (
-                <div key={m.id} className="flex items-center gap-3 rounded-2xl bg-card p-2">
+                <div key={m.id} className="flex items-center gap-3 rounded-2xl border-2 border-line bg-card p-2">
                   <img src={m.imageUrl} alt="" className="h-12 w-12 rounded-xl object-cover" />
-                  <span className="flex-1 truncate font-extrabold">{m.name}</span>
+                  {m.allowNote ? (
+                    <input className="field !min-h-[44px] min-w-0 flex-1 !rounded-xl !px-3 !text-base" placeholder={`${m.name}: which sweet?`} maxLength={40} value={which[m.id] ?? ''} onChange={(e) => setWhich({ ...which, [m.id]: e.target.value })} aria-label="Which sweet?" />
+                  ) : (
+                    <span className="flex-1 truncate font-extrabold">{m.name}</span>
+                  )}
                   <button className="btn btn-ghost btn-sm !w-11 !px-0" onClick={() => set(m.id, -1)} aria-label="Less"><Icon name="minus" size={18} /></button>
                   <span className="w-6 text-center text-xl font-black">{cart[m.id]}</span>
                   <button className="btn btn-pink btn-sm !w-11 !px-0" onClick={() => set(m.id, 1)} aria-label="More"><Icon name="plus" size={18} /></button>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><rect width="256" height="256" rx="40" fill="#e6efff"/><rect x="52" y="104" width="152" height="98" rx="14" fill="#3a86ff"/>
+      <rect x="44" y="82" width="168" height="36" rx="12" fill="#5b9bff"/>
+      <rect x="116" y="82" width="24" height="120" fill="#ffd23f"/>
+      <path d="M128 82 C104 38 62 56 86 82 Z M128 82 C152 38 194 56 170 82 Z" fill="#ffd23f"/>
+      <ellipse cx="86" cy="96" rx="22" ry="5" fill="#fff" opacity=".35"/>
+      <text x="128" y="176" text-anchor="middle" font-family="Nunito, ui-rounded, Arial Rounded MT Bold, Arial, sans-serif" font-weight="900" font-size="52" fill="#fff" stroke="rgba(0,0,0,.18)" stroke-width="1.5">?</text></svg>

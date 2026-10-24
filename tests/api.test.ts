@@ -37,10 +37,9 @@ d('Sugar Rush API', () => {
     await db.execute(sql`create schema public`)
     await db.execute(sql`drop schema if exists drizzle cascade`)
     await migrate(db as any, { migrationsFolder: './drizzle' })
-    const { menuItems, users } = await import('../lib/schema.js')
+    const { users } = await import('../lib/schema.js')
     const { hashPassword } = await import('../lib/security.js')
     await db.insert(users).values({ username: 'boss', name: 'Boss', role: 'owner', passwordHash: await hashPassword('correct-horse-1') })
-    await db.insert(menuItems).values(['A', 'B', 'C'].map((l, i) => ({ letter: l, name: `Sweet ${l}`, priceCents: 300 + i * 100, sortOrder: i })))
     const { dispatch } = await import('../lib/http.js')
     const { routes } = await import('../lib/routes.js')
     server = createServer(async (req: any, res) => {
@@ -57,7 +56,7 @@ d('Sugar Rush API', () => {
 
   it('serves the public menu and nothing private', async () => {
     const r = await call(null, 'GET', '/menu')
-    expect(r.json.items).toHaveLength(3)
+    expect(r.json.items.map((i: any) => i.name)).toEqual(['Cannoli', 'KitKat', 'Éclair', 'Macaron', 'Xocolat', 'Amorade', 'Other'])
     expect((await call(null, 'GET', '/orders')).status).toBe(401)
     expect((await call(null, 'GET', '/users')).status).toBe(401)
     expect((await call(null, 'GET', '/customers?q=a')).status).toBe(401)
@@ -116,7 +115,7 @@ d('Sugar Rush API', () => {
     expect(o.status).toBe('new')
     expect(o.amountCents).toBeNull() // customers cannot set money fields
     expect(o.driverCutCents).toBeNull()
-    expect(o.items[0]).toMatchObject({ id: 2, qty: 3, priceCents: 400 })
+    expect(o.items[0]).toMatchObject({ id: 2, sku: 'i2', name: 'KitKat', qty: 3, priceCents: 300 })
     const hp = await call(null, 'POST', '/public/order', { token, website: 'http://spam', items: [{ id: 1, qty: 1 }] })
     expect(hp.status).toBe(200)
     expect((await call('owner', 'GET', '/orders')).json.orders).toHaveLength(1) // honeypot created nothing
@@ -166,8 +165,9 @@ d('Sugar Rush API', () => {
   })
 
   it('menu admin: rename, price, image validation, image is served safely', async () => {
-    const r = await call('owner', 'PUT', '/admin/menu/1', { name: 'Gummy', priceCents: 450 })
-    expect(r.json.item).toMatchObject({ name: 'Gummy', priceCents: 450 })
+    const r = await call('owner', 'PUT', '/admin/menu/6', { name: 'Amorade!', priceCents: 450 })
+    expect(r.json.item).toMatchObject({ name: 'Amorade!', priceCents: 450 })
+    await call('owner', 'PUT', '/admin/menu/6', { name: 'Amorade', priceCents: 300 })
     expect((await call('owner', 'PUT', '/admin/menu/1', { image: 'data:image/svg+xml;base64,PHN2Zz4=' })).status).toBe(400)
     expect((await call('owner', 'PUT', '/admin/menu/1', { image: 'data:image/png;base64,AAAA' })).status).toBe(400) // wrong magic bytes
     const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
@@ -176,6 +176,154 @@ d('Sugar Rush API', () => {
     const img = await fetch(base + ok.json.item.imageUrl)
     expect(img.headers.get('content-type')).toBe('image/png')
     expect(img.headers.get('x-content-type-options')).toBe('nosniff')
+  })
+
+
+  // ---------------------------------------------------------------- stock
+  let eveId = '', danId = ''
+  const stockOf = async (who: string, itemId: number, holder: string) => {
+    const r = await call(who, 'GET', '/stock')
+    const it = r.json.items.find((i: any) => i.itemId === itemId && !i.custom)
+    return holder === 'store' ? it.store : (it.byDriver[holder] ?? 0)
+  }
+
+  it('real menu: Other asks for a name, retired placeholders stay hidden', async () => {
+    const menu = (await call(null, 'GET', '/menu')).json.items
+    expect(menu.find((i: any) => i.name === 'Other').allowNote).toBe(true)
+    expect(menu.some((i: any) => i.letter.length === 1)).toBe(false)
+    expect((await call('owner', 'GET', '/admin/menu')).json.items).toHaveLength(7)
+    const users = (await call('owner', 'GET', '/users')).json.users
+    eveId = users.find((u: any) => u.username === 'eve').id
+    danId = users.find((u: any) => u.username === 'dan').id
+  })
+
+  it('stock: only the owner touches the store; drivers only touch their own', async () => {
+    for (const [m, p, b] of [
+      ['GET', '/stock', undefined],
+      ['POST', '/stock/adjust', { holder: 'store', itemId: 1, delta: 1 }],
+      ['POST', '/stock/adjust', { holder: danId, itemId: 1, delta: 1 }],
+      ['POST', '/stock/transfer', { from: 'store', to: danId, items: [{ itemId: 1, qty: 1 }] }],
+      ['PUT', '/stock/settings', { lowThreshold: 1 }],
+    ] as const) expect((await call('eve', m, p, b)).status, `${m} ${p}`).toBe(403)
+    expect((await call(null, 'GET', '/stock')).status).toBe(401)
+    expect((await call('owner', 'GET', '/stock/me')).status).toBe(403)
+    // a driver with no holder given adjusts their own stock, never the store
+    expect((await call('eve', 'POST', '/stock/adjust', { itemId: 1, delta: 2 })).json.qty).toBe(2)
+    expect(await stockOf('owner', 1, 'store')).toBe(0)
+    expect((await call('eve', 'POST', '/stock/adjust', { itemId: 1, delta: -5 })).status).toBe(409) // cannot go below zero by hand
+    expect((await call('eve', 'POST', '/stock/adjust', { itemId: 1, set: 0 })).json.qty).toBe(0)
+    expect((await call('owner', 'POST', '/stock/adjust', { holder: 'store', itemId: 1 })).status).toBe(400)
+    expect((await call('owner', 'POST', '/stock/adjust', { holder: 'store', itemId: 7, delta: 1 })).status).toBe(400) // Other needs a name
+  })
+
+  it('stock: owner fills the store; concurrent taps never lose an update', async () => {
+    expect((await call('owner', 'POST', '/stock/adjust', { holder: 'store', itemId: 1, set: 20 })).json.qty).toBe(20)
+    expect((await call('owner', 'POST', '/stock/adjust', { holder: 'store', itemId: 2, set: 10 })).json.qty).toBe(10)
+    await call('owner', 'POST', '/stock/adjust', { holder: 'store', itemId: 7, name: 'Strawberry Tart', delta: 4 })
+    const taps = await Promise.all(Array.from({ length: 20 }, () => call('owner', 'POST', '/stock/adjust', { holder: 'store', itemId: 1, delta: 1 })))
+    expect(taps.every((t) => t.status === 200)).toBe(true)
+    expect(await stockOf('owner', 1, 'store')).toBe(40)
+    const ov = (await call('owner', 'GET', '/stock')).json
+    const tart = ov.items.find((i: any) => i.custom)
+    expect(tart).toMatchObject({ name: 'Strawberry Tart', store: 4, total: 4 })
+  })
+
+  it('stock: give to driver / take back are all-or-nothing and race-safe', async () => {
+    const give = (to: string, items: any[]) => call('owner', 'POST', '/stock/transfer', { from: 'store', to, items })
+    expect((await give(eveId, [{ itemId: 1, qty: 5 }, { itemId: 2, qty: 2 }])).status).toBe(200)
+    expect(await stockOf('owner', 1, eveId)).toBe(5)
+    expect(await stockOf('owner', 1, 'store')).toBe(35)
+    // one line too big => nothing moves at all
+    const bad = await give(eveId, [{ itemId: 1, qty: 1 }, { itemId: 2, qty: 999 }])
+    expect(bad.status).toBe(409)
+    expect(await stockOf('owner', 1, 'store')).toBe(35)
+    expect(await stockOf('owner', 1, eveId)).toBe(5)
+    // store has 8 of item 2: three parallel gives of 3 => exactly two succeed, never negative
+    const race = await Promise.all([1, 2, 3].map(() => give(danId, [{ itemId: 2, qty: 3 }])))
+    expect(race.map((r) => r.status).sort()).toEqual([200, 200, 409])
+    expect(await stockOf('owner', 2, 'store')).toBe(2)
+    // take back from the driver; cannot take back more than they carry
+    expect((await call('owner', 'POST', '/stock/transfer', { from: eveId, to: 'store', items: [{ itemId: 1, qty: 1 }] })).status).toBe(200)
+    expect(await stockOf('owner', 1, 'store')).toBe(36)
+    expect((await call('owner', 'POST', '/stock/transfer', { from: eveId, to: 'store', items: [{ itemId: 1, qty: 50 }] })).status).toBe(409)
+    expect((await call('owner', 'POST', '/stock/transfer', { from: 'store', to: 'store', items: [{ itemId: 1, qty: 1 }] })).status).toBe(400)
+    // driver sees their own stock
+    const mine = (await call('eve', 'GET', '/stock/me')).json.items
+    expect(mine.find((i: any) => i.itemId === 1).qty).toBe(4)
+    expect(mine.find((i: any) => i.itemId === 2).qty).toBe(2)
+    // driver adjusts own stock
+    expect((await call('eve', 'POST', '/stock/adjust', { itemId: 1, delta: 3 })).json.qty).toBe(7)
+  })
+
+  it('stock: delivering subtracts from the driver once, goes negative visibly, and reverts', async () => {
+    const mk = await call('owner', 'POST', '/orders', {
+      customerName: 'Stock Test', address: '9 Cannoli Rd', amountCents: 2000, driverCutCents: 300,
+      items: [{ id: 1, qty: 2 }, { id: 7, qty: 1, note: 'strawberry  TART' }],
+    })
+    const o = mk.json.order
+    expect(o.items.map((i: any) => i.sku)).toEqual(['i1', 'o:strawberry tart'])
+    expect((await call('eve', 'POST', `/orders/${o.id}/take`)).status).toBe(200)
+    const d = await call('eve', 'POST', `/orders/${o.id}/deliver`)
+    expect(d.status).toBe(200)
+    expect(d.json.negative).toHaveLength(1)
+    expect(d.json.negative[0].qty).toBe(-1)
+    expect(await stockOf('owner', 1, eveId)).toBe(5) // 7 - 2
+    // double tap / second request does nothing
+    expect((await call('eve', 'POST', `/orders/${o.id}/deliver`)).status).toBe(409)
+    expect(await stockOf('owner', 1, eveId)).toBe(5)
+    // "Other" is tracked by the typed name: the driver is at -1 and the owner can see it
+    const ov = (await call('owner', 'GET', '/stock')).json
+    expect(ov.items.find((i: any) => i.custom).byDriver[eveId]).toBe(-1)
+    expect(ov.items.find((i: any) => i.custom).total).toBe(3) // 4 in store + (-1) with eve
+    // two simultaneous deliver taps on a fresh order deduct exactly once
+    const o2 = (await call('owner', 'POST', '/orders', { items: [{ id: 1, qty: 1 }] })).json.order
+    await call('eve', 'POST', `/orders/${o2.id}/take`)
+    const dd = await Promise.all([call('eve', 'POST', `/orders/${o2.id}/deliver`), call('eve', 'POST', `/orders/${o2.id}/deliver`)])
+    expect(dd.map((r) => r.status).sort()).toEqual([200, 409])
+    expect(await stockOf('owner', 1, eveId)).toBe(4)
+    // delivered orders: items are locked; un-delivering gives the sweets back
+    expect((await call('owner', 'PATCH', `/orders/${o2.id}`, { items: [{ id: 2, qty: 1 }] })).status).toBe(400)
+    expect((await call('owner', 'PATCH', `/orders/${o2.id}`, { status: 'taken' })).status).toBe(200)
+    expect(await stockOf('owner', 1, eveId)).toBe(5)
+    expect((await call('owner', 'PATCH', `/orders/${o2.id}`, { status: 'delivered' })).status).toBe(200)
+    expect(await stockOf('owner', 1, eveId)).toBe(4)
+    expect((await call('owner', 'DELETE', `/orders/${o2.id}`)).status).toBe(200) // deleting a delivered order returns its sweets
+    expect(await stockOf('owner', 1, eveId)).toBe(5)
+    // orders from before stock tracking (no sku on the items) never touch stock
+    const { getDb } = await import('../lib/db.js')
+    const { orders } = await import('../lib/schema.js')
+    const [legacy] = await getDb().insert(orders).values({ source: 'customer', status: 'taken', driverId: eveId, driverName: 'Eve', items: [{ id: 1, name: 'Sweet A', qty: 9 }] }).returning()
+    expect((await call('eve', 'POST', `/orders/${legacy.id}/deliver`)).status).toBe(200)
+    expect(await stockOf('owner', 1, eveId)).toBe(5)
+  })
+
+  it('stock: history log and overview agree with what happened', async () => {
+    const log = (await call('owner', 'GET', `/stock/log?holder=${eveId}`)).json.log
+    const actions = new Set(log.map((l: any) => l.action))
+    for (const a of ['add', 'remove', 'transfer', 'deliver', 'revert']) expect(actions.has(a), a).toBe(true)
+    const del = log.find((l: any) => l.action === 'deliver' && l.sku === 'i1' && l.qty === 2)
+    expect(del).toMatchObject({ fromName: 'Eve', qty: 2, actorName: 'Eve' })
+    expect(log.find((l: any) => l.action === 'transfer' && l.qty === 5)).toMatchObject({ fromName: 'Store', toName: 'Eve', actorName: 'Boss' })
+    // a driver sees only their own history
+    const dlog = (await call('eve', 'GET', '/stock/log?holder=store')).json.log
+    expect(dlog.length).toBeGreaterThan(0)
+    expect(dlog.every((l: any) => l.fromHolder === eveId || l.toHolder === eveId)).toBe(true)
+    // date filter (store time zone)
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+    expect((await call('owner', 'GET', `/stock/log?from=${today}&to=${today}`)).json.log.length).toBeGreaterThan(0)
+    expect((await call('owner', 'GET', '/stock/log?from=2000-01-01&to=2000-01-02')).json.log).toHaveLength(0)
+    expect((await call('owner', 'GET', '/stock/log?from=nonsense')).status).toBe(400)
+    // overview totals = store + all drivers, per sweet
+    const ov = (await call('owner', 'GET', '/stock')).json
+    for (const it of ov.items) expect(it.total).toBe(it.store + Object.values<number>(it.byDriver).reduce((a, b) => a + b, 0))
+  })
+
+  it('stock: low-stock threshold is owner-editable and flags the overview', async () => {
+    expect((await call('owner', 'GET', '/stock')).json.threshold).toBe(5)
+    expect((await call('owner', 'GET', '/stock')).json.low.map((l: any) => l.name)).toContain('KitKat') // 2 left in the store
+    expect((await call('owner', 'PUT', '/stock/settings', { lowThreshold: 1 })).json.threshold).toBe(1)
+    expect((await call('owner', 'GET', '/stock')).json.low.map((l: any) => l.name)).not.toContain('KitKat')
+    expect((await call('owner', 'PUT', '/stock/settings', { lowThreshold: 5 })).status).toBe(200)
   })
 
   it('force logout, password reset and removal kill sessions', async () => {
@@ -189,7 +337,10 @@ d('Sugar Rush API', () => {
     expect((await call('dan', 'GET', '/auth/me')).status).toBe(401)
     expect((await call('dan', 'POST', '/auth/login', { username: 'dan', password: 'driverpass1' })).status).toBe(401)
     expect((await call('dan', 'POST', '/auth/login', { username: 'dan', password: 'brandnewpass1' })).status).toBe(200)
+    const before = await stockOf('owner', 2, 'store')
+    const danHad = await stockOf('owner', 2, dan.id) // may include a delivery from the earlier claim-race test
     await call('owner', 'DELETE', `/users/${dan.id}`)
+    expect(await stockOf('owner', 2, 'store')).toBe(before + danHad) // what dan was carrying went back to the store
     expect((await call('dan', 'GET', '/auth/me')).status).toBe(401)
     expect((await call('dan', 'POST', '/auth/login', { username: 'dan', password: 'brandnewpass1' })).status).toBe(401)
     // the owner cannot be removed through the drivers endpoints

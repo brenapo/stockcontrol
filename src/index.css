@@ -4,35 +4,19 @@
 @tailwind utilities;
 
 :root {
-  --surface: 255 245 249;
+  --surface: 255 255 255;
   --card: 255 255 255;
   --ink: 38 26 44;
   --mute: 104 90 112;
-  --line: 244 226 236;
+  --line: 240 228 236;
   --pink-soft: 255 228 238;
   --orange-soft: 255 238 214;
   --sun-soft: 255 247 204;
   --mint-soft: 212 246 241;
   --sky-soft: 219 234 255;
   --grape-soft: 236 227 255;
-  color-scheme: light dark;
+  color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface: 24 17 29;
-    --card: 40 31 47;
-    --ink: 252 245 251;
-    --mute: 189 175 197;
-    --line: 70 56 78;
-    --pink-soft: 80 30 52;
-    --orange-soft: 78 54 22;
-    --sun-soft: 74 64 20;
-    --mint-soft: 20 70 66;
-    --sky-soft: 26 48 88;
-    --grape-soft: 56 38 94;
-  }
-}
-
 html { -webkit-text-size-adjust: 100%; }
 body {
   @apply bg-surface text-ink font-sans antialiased;
@@ -60,7 +44,7 @@ button { @apply select-none; touch-action: manipulation; }
     @apply min-h-[54px] w-full rounded-2xl border-2 border-line bg-card px-4 text-lg text-ink
       placeholder:text-mute/70 focus:border-pink focus:outline-none;
   }
-  .card { @apply rounded-3xl bg-card p-4 shadow-card; }
+  .card { @apply rounded-3xl border-2 border-line bg-card p-4 shadow-card; }
   .chip { @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-extrabold; }
   .label { @apply mb-1 block text-sm font-extrabold uppercase tracking-wide text-mute; }
 }

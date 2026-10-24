@@ -10,13 +10,13 @@ Installable PWA (iPhone + Android), mobile first, all UI in English.
 
 ## Stack
 
-Vite + React + Tailwind · Vercel serverless API (`/api`) · Neon Postgres via Drizzle ORM · own session auth (scrypt + httpOnly cookie).
+Vite + React + Tailwind · Vercel serverless API (`/api`) · Neon Postgres (node-postgres + Drizzle ORM, real transactions) · own session auth (scrypt + httpOnly cookie). Light theme only, on every device.
 
 ```
 api/[...path].ts   single serverless function (router in lib/)
 lib/               schema, db, auth/security, routes, Telegram + push
 src/               React app (customer page, owner screens, driver screens)
-public/            manifest, service worker, icons, splash screens, 26 placeholder sweets
+public/            manifest, service worker, icons, splash screens, the menu illustrations
 scripts/           migrate, seed, asset generator, VAPID keys, local API server
 drizzle/           SQL migrations
 tests/             API integration tests (need a Postgres)
@@ -35,7 +35,7 @@ tests/             API integration tests (need a Postgres)
 
 | Variable | Purpose |
 | --- | --- |
-| `DATABASE_URL` | Neon connection string (server only) |
+| `DATABASE_URL` | Neon connection string, the pooled one Vercel injects (server only). Migrations prefer `DATABASE_URL_UNPOOLED` when present |
 | `SESSION_SECRET` | 16+ random chars, signs the public-form token |
 | `OWNER_USERNAME`, `OWNER_NAME`, `OWNER_PASSWORD` | first owner account (10+ char password) |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | family group alerts |
@@ -67,7 +67,14 @@ TEST_DATABASE_URL=postgres://user@localhost:5432/sugar_test npm test
 - Driver accounts are created by the owner under **Team** (no public sign-up). **Force logout** and **Log out all** end sessions immediately; **Remove** disables the account and returns its unfinished deliveries to the open list.
 - Money: only the owner can set amount, payment method and driver's cut. "Owes owner" auto-fills as amount − cut and stays editable.
 - Payouts: today/this week come from delivered orders; the owner taps **Settled** per driver (or per order).
-- Menu: **Menu** tab → rename, change price, tap the picture to upload a photo, hide an item, or reset to the built-in sweet.
+- Menu: Cannoli, KitKat, Éclair, Macaron, Xocolat, Amorade and **Other** (the customer or owner types which sweet). **More → Menu** lets the owner rename, change price, upload a photo, hide an item, or reset to the built-in drawing. The old A–Z placeholders are retired (hidden); old orders keep the names they were placed with.
+- Stock (owner, **Stock** tab):
+  - *Overview*: store stock, each driver's stock, total per sweet, low-stock list and the alert level (default 5 or less).
+  - *Store*: +/−, or tap the number to type it. **Give / take back** moves sweets between the store and a driver, all or nothing.
+  - *Drivers*: the owner can see and edit every driver's stock.
+  - *History*: who added, removed, moved or delivered what, and when. Filter by driver/store and date.
+- Stock (driver, **My stock** tab): a driver carries their own stock and can add/adjust only that. **Delivered** subtracts the order's sweets from that driver automatically; delivery is never blocked, and if the driver is short the number shows red (negative) for both driver and owner. "Other" sweets are tracked by the name typed. Undoing a delivery (or deleting a delivered order) gives the sweets back; delivered orders' items are locked.
+- Low stock: shown in the app and sent to Telegram once when a store item drops to the alert level or below.
 - Archive: delivered orders can be archived one by one or in bulk (30+ days); archived orders are hidden from drivers and the default list but still count in payouts until settled.
 - Repeat last order: customers' phones remember their last order on the device; the owner's **New** form finds returning customers by phone or name and repeats their last order. (The public page never reads server data.)
 - Logo: replace `public/logo.svg`, delete nothing else, run `npm run assets` to rebuild icons and splash screens.
@@ -79,4 +86,5 @@ TEST_DATABASE_URL=postgres://user@localhost:5432/sugar_test npm test
 - Every API route declares its access level (`public | user | owner | driver`); drivers only receive open orders and their own, only the owner can write amounts, menu and users.
 - Public order endpoint: create-only, rate limited per IP and globally, honeypot field, signed time-gated token, prices always taken from the server menu.
 - State-changing requests must come from the app's own origin (CSRF); strict CSP, HSTS, no framing, no referrer; no secrets in the repo or the browser.
+- Stock: every change goes through the server in one database transaction (row locks, all-or-nothing transfers) and is written to the history log; drivers can never touch the store or another driver.
 - Input is validated with zod, control characters stripped, Telegram messages HTML-escaped, SQL is parameterised (Drizzle).

@@ -1,15 +1,14 @@
-import { migrate as migrateNeon } from 'drizzle-orm/neon-http/migrator'
-import { migrate as migratePg } from 'drizzle-orm/node-postgres/migrator'
+import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { drizzle } from 'drizzle-orm/node-postgres'
-import { getDb } from '../lib/db.js'
+import pg from 'pg'
 
-const url = process.env.DATABASE_URL ?? process.env.POSTGRES_URL
+// Migrations prefer the direct (unpooled) Neon URL when present.
+const url = process.env.DATABASE_URL_UNPOOLED ?? process.env.POSTGRES_URL_NON_POOLING ?? process.env.DATABASE_URL ?? process.env.POSTGRES_URL
 if (!url) {
   console.warn('db:migrate skipped — DATABASE_URL is not set')
   process.exit(0)
 }
-const db = getDb()
-if (/neon\.tech|neon\.build/.test(url)) await migrateNeon(db, { migrationsFolder: './drizzle' })
-else await migratePg(db as unknown as ReturnType<typeof drizzle>, { migrationsFolder: './drizzle' })
+const pool = new pg.Pool({ connectionString: url, max: 1 })
+await migrate(drizzle(pool), { migrationsFolder: './drizzle' })
+await pool.end()
 console.log('migrations applied')
-process.exit(0)

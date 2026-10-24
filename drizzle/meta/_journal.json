@@ -8,6 +8,13 @@
       "when": 1792719946270,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792807030064,
+      "tag": "0001_stock_and_real_menu",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
-// Idempotent: creates the owner account (if none exists) and the 26 placeholder sweets (if the menu is empty).
+// Idempotent: creates the owner account (if none exists).
 import { eq } from 'drizzle-orm'
 import { getDb } from '../lib/db.js'
-import { menuItems, users } from '../lib/schema.js'
+import { users } from '../lib/schema.js'
 import { hashPassword } from '../lib/security.js'
 
 if (!process.env.DATABASE_URL && !process.env.POSTGRES_URL) {
@@ -26,12 +26,5 @@ if (!owner) {
   }
 }
 
-const existing = await db.select({ id: menuItems.id }).from(menuItems).limit(1)
-if (!existing.length) {
-  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
-  await db.insert(menuItems).values(
-    letters.map((l, i) => ({ letter: l, name: `Sweet ${l}`, priceCents: 300, sortOrder: i })),
-  )
-  console.log('menu seeded (26 items)')
-}
+// the real menu (Cannoli … Other) is created by migration 0001
 process.exit(0)

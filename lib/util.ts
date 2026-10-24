@@ -16,3 +16,8 @@ export function digits(phone: string | null | undefined): string | null {
 
 export const money = (cents: number | null | undefined) =>
   cents == null ? '' : `$${(cents / 100).toFixed(2)}`
+
+export const STORE_TZ = (() => {
+  const t = process.env.STORE_TZ || 'America/New_York'
+  try { new Intl.DateTimeFormat('en', { timeZone: t }); return t } catch { return 'America/New_York' }
+})()

@@ -6,7 +6,7 @@ import type { MenuItem, Order, Pay, Status, User } from '../types'
 import { Icon } from './Icon'
 import { Segmented, useToast } from './ui'
 
-type Customer = { name: string | null; phone: string | null; address: string | null; items: { id?: number; qty: number }[]; itemsText: string | null }
+type Customer = { name: string | null; phone: string | null; address: string | null; items: { id?: number; qty: number; note?: string }[]; itemsText: string | null }
 
 export function OrderForm({ initial, menu, onSaved }: { initial?: Order; menu: MenuItem[]; onSaved: (o: Order) => void }) {
   const { toast, fail } = useToast()
@@ -18,6 +18,9 @@ export function OrderForm({ initial, menu, onSaved }: { initial?: Order; menu: M
   const [itemsText, setItemsText] = useState(initial?.itemsText ?? '')
   const [qty, setQty] = useState<Record<number, number>>(() =>
     Object.fromEntries((initial?.items ?? []).filter((i) => i.id != null).map((i) => [i.id!, i.qty])),
+  )
+  const [which, setWhich] = useState<Record<number, string>>(() =>
+    Object.fromEntries((initial?.items ?? []).filter((i) => i.id != null && i.note).map((i) => [i.id!, i.note!])),
   )
   const [amount, setAmount] = useState(fromCents(initial?.amountCents))
   const [pay, setPay] = useState<Pay | null>(initial?.paymentMethod ?? null)
@@ -56,6 +59,7 @@ export function OrderForm({ initial, menu, onSaved }: { initial?: Order; menu: M
     setName(c.name ?? ''); setPhone(c.phone ?? ''); setAddress(c.address ?? ''); setItemsText(c.itemsText ?? '')
     const ids = new Set(menu.map((m) => m.id))
     setQty(Object.fromEntries(c.items.filter((i) => i.id != null && ids.has(i.id)).map((i) => [i.id!, i.qty])))
+    setWhich(Object.fromEntries(c.items.filter((i) => i.id != null && i.note && ids.has(i.id)).map((i) => [i.id!, i.note!])))
     setFound([])
   }
 
@@ -73,10 +77,11 @@ export function OrderForm({ initial, menu, onSaved }: { initial?: Order; menu: M
         customerName: name || null, phone: phone || null, address: address || null, notes: notes || null, itemsText: itemsText || null,
         amountCents: toCents(amount), paymentMethod: pay, driverCutCents: toCents(cut), ownerOwedCents: toCents(owed),
       }
-      const items = Object.entries(qty).map(([id, n]) => ({ id: Number(id), qty: n }))
-      const before = (initial?.items ?? []).filter((i) => i.id != null).map((i) => `${i.id}:${i.qty}`).sort().join()
+      const items = Object.entries(qty).map(([id, n]) => ({ id: Number(id), qty: n, note: which[Number(id)]?.trim() || null }))
+      const key = (i: { id?: number; qty: number; note?: string | null }) => `${i.id}:${i.qty}:${i.note ?? ''}`
+      const before = (initial?.items ?? []).filter((i) => i.id != null).map(key).sort().join()
       // when editing, leave the stored item snapshot alone unless the owner changed the picks
-      if (!edit || items.map((i) => `${i.id}:${i.qty}`).sort().join() !== before) body.items = items
+      if (!edit || items.map(key).sort().join() !== before) body.items = items
       if (edit) {
         body.status = status
         if (status !== 'new') body.driverId = driverId || null
@@ -87,7 +92,7 @@ export function OrderForm({ initial, menu, onSaved }: { initial?: Order; menu: M
         const r = await api<{ order: Order }>('/orders', { body })
         toast('Order created')
         onSaved(r.order)
-        setName(''); setPhone(''); setAddress(''); setNotes(''); setItemsText(''); setQty({}); setAmount(''); setPay(null); setCut(''); setOwed(''); setOwedTouched(false)
+        setName(''); setPhone(''); setAddress(''); setNotes(''); setItemsText(''); setQty({}); setWhich({}); setAmount(''); setPay(null); setCut(''); setOwed(''); setOwedTouched(false)
       }
     } catch (e) {
       fail(e)
@@ -129,7 +134,7 @@ export function OrderForm({ initial, menu, onSaved }: { initial?: Order; menu: M
         {picked.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {picked.map((m) => (
-              <span key={m.id} className="chip bg-pink-soft text-base text-pink-dark dark:text-pink">{qty[m.id]}× {m.name}</span>
+              <span key={m.id} className="chip bg-pink-soft text-base text-pink-dark">{qty[m.id]}× {m.allowNote && which[m.id]?.trim() ? which[m.id] : m.name}</span>
             ))}
           </div>
         )}
@@ -147,6 +152,9 @@ export function OrderForm({ initial, menu, onSaved }: { initial?: Order; menu: M
                     <span className="px-2 text-lg font-black">{qty[m.id]}</span>
                     <button type="button" className="btn btn-pink !min-h-[40px] !rounded-lg !px-0" onClick={() => bump(m.id, 1)} aria-label="More"><Icon name="plus" size={18} /></button>
                   </div>
+                ) : null}
+                {qty[m.id] && m.allowNote ? (
+                  <input className="field !min-h-[40px] mt-1 !rounded-lg !px-2 !text-sm" placeholder="Which sweet?" maxLength={40} value={which[m.id] ?? ''} onChange={(e) => setWhich({ ...which, [m.id]: e.target.value })} aria-label="Which sweet?" />
                 ) : null}
               </div>
             ))}
