@@ -5,7 +5,7 @@ const LAS_VEGAS = '-115.1398,36.1699'
 export async function suggestAddresses(input: string): Promise<string[]> {
   const url = new URL('https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/suggest')
   url.search = new URLSearchParams({
-    text: input, f: 'json', countryCode: 'USA', location: LAS_VEGAS, distance: '80000', maxSuggestions: '5', category: 'Address,Postal',
+    text: input, f: 'json', countryCode: 'USA', location: LAS_VEGAS, distance: '80000', maxSuggestions: '10', category: 'Address,Postal',
   }).toString()
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 4000)
@@ -13,7 +13,10 @@ export async function suggestAddresses(input: string): Promise<string[]> {
     const r = await fetch(url, { signal: ctrl.signal })
     if (!r.ok) return []
     const j = (await r.json()) as { suggestions?: { text?: string; isCollection?: boolean }[] }
-    return (j.suggestions ?? []).filter((s) => !s.isCollection && s.text).map((s) => s.text!).slice(0, 5)
+    const all = (j.suggestions ?? []).filter((s) => !s.isCollection && s.text).map((s) => s.text!)
+    // deliveries are local: when Nevada matches exist, hide the same street in other states
+    const nv = all.filter((t) => /, NV(,|$)/.test(t))
+    return (nv.length ? nv : all).slice(0, 5)
   } catch {
     return []
   } finally {

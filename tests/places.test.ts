@@ -7,6 +7,7 @@ describe('address suggestions (ArcGIS)', () => {
   it('asks ArcGIS biased to Las Vegas, no key, and returns address text only', async () => {
     const f = vi.fn(async () => new Response(JSON.stringify({ suggestions: [
       { text: '123 Main St, Las Vegas, NV, 89101, USA', isCollection: false }, { text: 'Main St Coffee', isCollection: true },
+      { text: '123 Main St, Buckeye, AZ, 85326, USA', isCollection: false },
     ] })))
     vi.stubGlobal('fetch', f)
     expect(await suggestAddresses('123 Main')).toEqual(['123 Main St, Las Vegas, NV, 89101, USA'])
