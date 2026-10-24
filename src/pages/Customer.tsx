@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AddressInput } from '../components/AddressInput'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../auth'
 import { api } from '../api'
 import { Icon } from '../components/Icon'
 import { Logo, Sheet, Spinner, useToast } from '../components/ui'
@@ -16,6 +17,7 @@ function loadLast(): Saved | null {
 }
 
 export default function Customer() {
+  const { user } = useAuth()
   const { fail } = useToast()
   const [menu, setMenu] = useState<MenuItem[] | null>(null)
   const [cart, setCart] = useState<Record<number, number>>({})
@@ -99,10 +101,13 @@ export default function Customer() {
   return (
     <main className="mx-auto max-w-3xl pb-36">
       <header className="sticky top-0 z-20 flex items-center justify-between bg-surface/90 px-4 pb-3 backdrop-blur" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}>
-        <Logo />
-        {last && menu && (
-          <button className="btn btn-sm btn-ghost" onClick={repeat}><Icon name="repeat" size={20} />Again</button>
-        )}
+        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Top"><Logo /></button>
+        <div className="flex items-center gap-2">
+          {last && menu && (
+            <button className="btn btn-sm btn-ghost" onClick={repeat}><Icon name="repeat" size={20} />Again</button>
+          )}
+          {user && <Link to="/app" className="btn btn-sm btn-pink"><Icon name="box" size={20} />App</Link>}
+        </div>
       </header>
 
       {!menu ? <Spinner /> : (

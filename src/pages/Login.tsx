@@ -20,7 +20,7 @@ export default function Login() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 p-6">
-      <div className="flex justify-center"><Logo size={72} text={false} /></div>
+      <Link to="/" className="flex justify-center" aria-label="Sweets menu"><Logo size={72} text={false} /></Link>
       <h1 className="text-center text-4xl font-black text-pink">Sugar Rush</h1>
       <form onSubmit={submit} className="space-y-3">
         <div className="relative">

@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { Icon } from '../components/Icon'
 import { Logo, useToast } from '../components/ui'
@@ -26,7 +27,7 @@ export default function Shell({ tabs, tab, onTab, children }: { tabs: Tab[]; tab
   return (
     <div className="mx-auto min-h-dvh max-w-2xl pb-28">
       <header className="sticky top-0 z-20 flex items-center justify-between bg-surface/90 px-4 pb-2 backdrop-blur" style={{ paddingTop: 'calc(0.6rem + env(safe-area-inset-top))' }}>
-        <Logo size={36} />
+        <Link to="/" aria-label="Sweets menu"><Logo size={36} /></Link>
         <div className="flex items-center gap-2">
           <span className="hidden text-base font-extrabold text-mute min-[380px]:inline">{user?.name}</span>
           {pushSupported() && (

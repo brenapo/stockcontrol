@@ -32,7 +32,6 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
   const [status, setStatus] = useState<Status>(initial?.status ?? 'new')
   const [driverId, setDriverId] = useState<string>(initial?.driverId ?? '')
   const [drivers, setDrivers] = useState<User[]>([])
-  const [showMenu, setShowMenu] = useState(false)
   const [busy, setBusy] = useState(false)
   const [found, setFound] = useState<Customer[]>([])
 
@@ -128,10 +127,7 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
       <AddressInput value={address} onChange={setAddress} withIcon />
 
       <div className="space-y-2 rounded-3xl bg-card p-3">
-        <div className="flex items-center justify-between">
-          <span className="label !mb-0">Items</span>
-          <button type="button" className="btn btn-sm btn-ghost" onClick={() => setShowMenu((v) => !v)}><Icon name="candy" size={20} />{showMenu ? 'Hide menu' : 'Menu'}</button>
-        </div>
+        <span className="label !mb-0">Items</span>
         {picked.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {picked.map((m) => (
@@ -139,8 +135,7 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
             ))}
           </div>
         )}
-        {showMenu && (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             {menu.map((m) => (
               <div key={m.id} className={`rounded-2xl border-2 p-1.5 ${qty[m.id] ? 'border-pink' : 'border-line'}`}>
                 <button type="button" className="block w-full" onClick={() => bump(m.id, 1)} aria-label={`Add ${m.name}`}>
@@ -148,9 +143,9 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
                   <div className="truncate text-sm font-extrabold">{m.name}</div>
                 </button>
                 {qty[m.id] ? (
-                  <div className="mt-1 grid grid-cols-[1fr_auto_1fr] items-center">
+                  <div className="mt-1 grid grid-cols-[1fr_auto_1fr] items-center gap-0.5">
                     <button type="button" className="btn btn-ghost !min-h-[40px] !rounded-lg !px-0" onClick={() => bump(m.id, -1)} aria-label="Less"><Icon name="minus" size={18} /></button>
-                    <span className="px-2 text-lg font-black">{qty[m.id]}</span>
+                    <span className="min-w-[2.2ch] text-center text-base font-black">{qty[m.id]}</span>
                     <button type="button" className="btn btn-pink !min-h-[40px] !rounded-lg !px-0" onClick={() => bump(m.id, 1)} aria-label="More"><Icon name="plus" size={18} /></button>
                   </div>
                 ) : null}
@@ -160,7 +155,6 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
               </div>
             ))}
           </div>
-        )}
         <input className="field" placeholder="Other items (free text)" value={itemsText} onChange={(e) => setItemsText(e.target.value)} maxLength={500} />
       </div>
 
