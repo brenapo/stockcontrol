@@ -56,7 +56,7 @@ d('Sugar Rush API', () => {
 
   it('serves the public menu and nothing private', async () => {
     const r = await call(null, 'GET', '/menu')
-    expect(r.json.items.map((i: any) => i.name)).toEqual(['Cannoli', 'KitKat', 'Éclair', 'Macaron', 'Xocolat', 'Amorade', 'Other'])
+    expect(r.json.items.map((i: any) => i.name)).toEqual(['Cannoli', 'Key Lime Pie', 'Éclair', 'Maria Mole', 'Xocolat', 'Amorade', 'Other'])
     expect((await call(null, 'GET', '/orders')).status).toBe(401)
     expect((await call(null, 'GET', '/users')).status).toBe(401)
     expect((await call(null, 'GET', '/customers?q=a')).status).toBe(401)
@@ -115,7 +115,7 @@ d('Sugar Rush API', () => {
     expect(o.status).toBe('new')
     expect(o.amountCents).toBeNull() // customers cannot set money fields
     expect(o.driverCutCents).toBeNull()
-    expect(o.items[0]).toMatchObject({ id: 2, sku: 'i2', name: 'KitKat', qty: 3, priceCents: 300 })
+    expect(o.items[0]).toMatchObject({ id: 2, sku: 'i2', name: 'Key Lime Pie', qty: 3, priceCents: 300 })
     const hp = await call(null, 'POST', '/public/order', { token, website: 'http://spam', items: [{ id: 1, qty: 1 }] })
     expect(hp.status).toBe(200)
     expect((await call('owner', 'GET', '/orders')).json.orders).toHaveLength(1) // honeypot created nothing
@@ -320,9 +320,9 @@ d('Sugar Rush API', () => {
 
   it('stock: low-stock threshold is owner-editable and flags the overview', async () => {
     expect((await call('owner', 'GET', '/stock')).json.threshold).toBe(5)
-    expect((await call('owner', 'GET', '/stock')).json.low.map((l: any) => l.name)).toContain('KitKat') // 2 left in the store
+    expect((await call('owner', 'GET', '/stock')).json.low.map((l: any) => l.name)).toContain('Key Lime Pie') // 2 left in the store
     expect((await call('owner', 'PUT', '/stock/settings', { lowThreshold: 1 })).json.threshold).toBe(1)
-    expect((await call('owner', 'GET', '/stock')).json.low.map((l: any) => l.name)).not.toContain('KitKat')
+    expect((await call('owner', 'GET', '/stock')).json.low.map((l: any) => l.name)).not.toContain('Key Lime Pie')
     expect((await call('owner', 'PUT', '/stock/settings', { lowThreshold: 5 })).status).toBe(200)
   })
 

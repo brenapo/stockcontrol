@@ -23,7 +23,7 @@ export const STORE_TZ = (() => {
 })()
 
 // Built-in sweet image: real photo (public/candy/<key>.webp) when we have one, else the drawn SVG.
-const PHOTOS = new Set(['cannoli', 'kitkat', 'eclair', 'xocolat', 'amorade', 'other'])
+const PHOTOS = new Set(['cannoli', 'keylime', 'eclair', 'mariamole', 'xocolat', 'amorade', 'other'])
 export const builtInImage = (key: string) => {
   const k = key.toLowerCase()
   return PHOTOS.has(k) ? `/candy/${k}.webp` : `/candy/${k}.svg`

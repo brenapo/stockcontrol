@@ -67,7 +67,7 @@ TEST_DATABASE_URL=postgres://user@localhost:5432/sugar_test npm test
 - Driver accounts are created by the owner under **Team** (no public sign-up). **Force logout** and **Log out all** end sessions immediately; **Remove** disables the account and returns its unfinished deliveries to the open list.
 - Money: only the owner can set amount, payment method and driver's cut. "Owes owner" auto-fills as amount − cut and stays editable.
 - Payouts: today/this week come from delivered orders; the owner taps **Settled** per driver (or per order).
-- Menu: Cannoli, KitKat, Éclair, Macaron, Xocolat, Amorade and **Other** (the customer or owner types which sweet). **More → Menu** lets the owner rename, change price, upload a photo, hide an item, or reset to the built-in drawing. The old A–Z placeholders are retired (hidden); old orders keep the names they were placed with.
+- Menu: Cannoli, Key Lime Pie, Éclair, Maria Mole, Xocolat, Amorade and **Other** (the customer or owner types which sweet). **More → Menu** lets the owner rename, change price, upload a photo, hide an item, or reset to the built-in drawing. The old A–Z placeholders are retired (hidden); old orders keep the names they were placed with.
 - Stock (owner, **Stock** tab):
   - *Overview*: store stock, each driver's stock, total per sweet, low-stock list and the alert level (default 5 or less).
   - *Store*: +/−, or tap the number to type it. **Give / take back** moves sweets between the store and a driver, all or nothing.
