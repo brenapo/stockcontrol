@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { api } from '../api'
-import { fromCents, toCents } from '../format'
+import { toCents } from '../format'
+import { useSplit } from '../split'
 import type { Order, Pay } from '../types'
 import { Icon } from './Icon'
 import { Money } from './OrderBits'
@@ -10,24 +11,13 @@ import { Segmented, useToast } from './ui'
 export function SplitEditor({ o, onSaved }: { o: Order; onSaved: () => void }) {
   const { toast, fail } = useToast()
   const [open, setOpen] = useState(false)
-  const [amount, setAmount] = useState('')
+  const { amount, cut, owed, setAmount, setCut, setOwed, load } = useSplit()
   const [pay, setPay] = useState<Pay | null>(null)
-  const [cut, setCut] = useState('')
-  const [owed, setOwed] = useState('')
-  const [touched, setTouched] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const start = () => {
-    setAmount(fromCents(o.amountCents)); setPay(o.paymentMethod); setCut(fromCents(o.driverCutCents)); setOwed(fromCents(o.ownerOwedCents))
-    setTouched(o.ownerOwedCents != null && o.amountCents != null && o.ownerOwedCents !== o.amountCents - (o.driverCutCents ?? 0))
-    setOpen(true)
+    load(o); setPay(o.paymentMethod); setOpen(true)
   }
-  // pass to owner = collected − you keep, until typed by hand
-  useEffect(() => {
-    if (!open || touched) return
-    const a = toCents(amount)
-    setOwed(a == null ? '' : fromCents(a - (toCents(cut) ?? 0)))
-  }, [amount, cut, touched, open])
 
   const save = async () => {
     setBusy(true)
@@ -60,7 +50,7 @@ export function SplitEditor({ o, onSaved }: { o: Order; onSaved: () => void }) {
       <Segmented<Pay> value={pay} onChange={setPay} options={[{ value: 'cash', label: 'Cash', icon: 'cash' }, { value: 'zelle', label: 'Zelle', icon: 'bank' }]} />
       <div className="grid grid-cols-2 gap-2">
         {field(`cut-${o.id}`, 'You keep', cut, setCut)}
-        {field(`owed-${o.id}`, 'Pass to owner', owed, (s) => { setOwed(s); setTouched(true) })}
+        {field(`owed-${o.id}`, 'Pass to owner', owed, setOwed)}
       </div>
       <div className="grid grid-cols-[1fr_auto] gap-2">
         <button className="btn btn-pink" disabled={busy} onClick={save}><Icon name="check" />Save</button>

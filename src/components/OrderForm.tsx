@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
 import { fromCents, money, stepDown, stepUp, toCents } from '../format'
 import { useDebounced } from '../hooks'
+import { useSplit } from '../split'
 import type { MenuItem, Order, Pay, Status, User } from '../types'
 import { AddressInput } from './AddressInput'
 import { Icon } from './Icon'
@@ -24,11 +25,8 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
   const [which, setWhich] = useState<Record<number, string>>(() =>
     Object.fromEntries((initial?.items ?? []).filter((i) => i.id != null && i.note).map((i) => [i.id!, i.note!])),
   )
-  const [amount, setAmount] = useState(fromCents(initial?.amountCents))
+  const { amount, cut, owed, setAmount, setCut, setOwed, reset: resetSplit } = useSplit(initial)
   const [pay, setPay] = useState<Pay | null>(initial?.paymentMethod ?? null)
-  const [cut, setCut] = useState(fromCents(initial?.driverCutCents))
-  const [owed, setOwed] = useState(fromCents(initial?.ownerOwedCents))
-  const [owedTouched, setOwedTouched] = useState(edit && initial?.ownerOwedCents != null)
   const [status, setStatus] = useState<Status>(initial?.status ?? 'new')
   const [driverId, setDriverId] = useState<string>(initial?.driverId ?? '')
   const [drivers, setDrivers] = useState<User[]>([])
@@ -38,12 +36,6 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
   const menuTotal = useMemo(() => menu.reduce((s, m) => s + Math.round((qty[m.id] ?? 0) * m.priceCents), 0), [menu, qty])
   const picked = menu.filter((m) => qty[m.id])
 
-  // owner owes = amount to collect − driver's cut, until the owner types their own number
-  useEffect(() => {
-    if (owedTouched) return
-    const a = toCents(amount)
-    setOwed(a == null ? '' : fromCents(a - (toCents(cut) ?? 0)))
-  }, [amount, cut, owedTouched])
 
   useEffect(() => {
     if (edit) api<{ users: User[] }>('/users').then((r) => setDrivers(r.users.filter((u) => u.role === 'driver'))).catch(() => {})
@@ -95,7 +87,7 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
         const r = await api<{ order: Order }>('/orders', { body })
         toast(driver ? 'Added to your deliveries' : 'Order created')
         onSaved(r.order)
-        setName(''); setPhone(''); setAddress(''); setNotes(''); setItemsText(''); setQty({}); setWhich({}); setAmount(''); setPay(null); setCut(''); setOwed(''); setOwedTouched(false)
+        setName(''); setPhone(''); setAddress(''); setNotes(''); setItemsText(''); setQty({}); setWhich({}); resetSplit(); setPay(null)
       }
     } catch (e) {
       fail(e)
@@ -103,6 +95,25 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
       setBusy(false)
     }
   }
+
+  const owedField = (
+    <div>
+      <label className="label" htmlFor="owed">{driver ? 'Pass to owner' : 'Owes owner'}</label>
+      <div className="relative">
+        <span className="absolute left-4 top-[13px] text-lg font-black text-mute">$</span>
+        <input id="owed" className="field !pl-9" inputMode="decimal" placeholder="0.00" value={owed} onChange={(e) => setOwed(e.target.value)} />
+      </div>
+    </div>
+  )
+  const cutField = (
+    <div>
+      <label className="label" htmlFor="cut">{driver ? 'You keep' : 'Driver keeps'}</label>
+      <div className="relative">
+        <span className="absolute left-4 top-[13px] text-lg font-black text-mute">$</span>
+        <input id="cut" className="field !pl-9" inputMode="decimal" placeholder="0.00" value={cut} onChange={(e) => setCut(e.target.value)} />
+      </div>
+    </div>
+  )
 
   return (
     <div className="space-y-3">
@@ -173,20 +184,7 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
         </div>
         <Segmented<Pay> value={pay} onChange={setPay} options={[{ value: 'cash', label: 'Cash', icon: 'cash' }, { value: 'zelle', label: 'Zelle', icon: 'bank' }]} />
         <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="label" htmlFor="cut">{driver ? 'You keep' : 'Driver keeps'}</label>
-            <div className="relative">
-              <span className="absolute left-4 top-[13px] text-lg font-black text-mute">$</span>
-              <input id="cut" className="field !pl-9" inputMode="decimal" placeholder="0.00" value={cut} onChange={(e) => setCut(e.target.value)} />
-            </div>
-          </div>
-          <div>
-            <label className="label" htmlFor="owed">{driver ? 'Pass to owner' : 'Owes owner'}</label>
-            <div className="relative">
-              <span className="absolute left-4 top-[13px] text-lg font-black text-mute">$</span>
-              <input id="owed" className="field !pl-9" inputMode="decimal" placeholder="0.00" value={owed} onChange={(e) => { setOwed(e.target.value); setOwedTouched(true) }} />
-            </div>
-          </div>
+          {cutField}{owedField}
         </div>
       </div>
 
