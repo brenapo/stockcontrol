@@ -36,7 +36,10 @@ export function json(res: Res, status: number, data: unknown, headers: Record<st
 export async function dispatch(routes: Route[], req: Req, res: Res): Promise<void> {
   try {
     const url = new URL(req.url ?? '/', 'http://x')
-    const path = url.pathname.replace(/^\/api/, '').replace(/\/+$/, '') || '/'
+    // On Vercel every /api/* request is rewritten to the single function with the original path in `__path`;
+    // locally (and in tests) the original /api/... URL arrives as is.
+    const rewritten = url.searchParams.get('__path')
+    const path = rewritten !== null ? `/${rewritten}`.replace(/\/+$/, '') || '/' : url.pathname.replace(/^\/api/, '').replace(/\/+$/, '') || '/'
     const method = (req.method ?? 'GET').toUpperCase()
 
     let matched: { route: Route; params: string[] } | undefined

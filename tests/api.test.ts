@@ -54,6 +54,15 @@ d('Sugar Rush API', () => {
   })
   afterAll(() => server?.close())
 
+  it('routes the Vercel rewrite form (/api/index?__path=...) like the plain URL', async () => {
+    const r = await fetch(`${base}/api/index?__path=public%2Ftoken`)
+    expect(r.status).toBe(200)
+    expect((await r.json()).token).toMatch(/\./)
+    const nested = await fetch(`${base}/api/index?__path=stock%2Fme`)
+    expect(nested.status).toBe(401) // found, but needs a login
+    expect((await fetch(`${base}/api/index?__path=`)).status).toBe(404) // bare /api has no route
+  })
+
   it('serves the public menu and nothing private', async () => {
     const r = await call(null, 'GET', '/menu')
     expect(r.json.items.map((i: any) => i.name)).toEqual(['Cannoli', 'Key Lime Pie', 'Éclair', 'Maria Mole', 'Xocolat', 'Amorade', 'Other'])
