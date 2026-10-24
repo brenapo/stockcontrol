@@ -139,30 +139,30 @@ const publicUser = (u: { id: string; username: string; name: string; role: strin
 // ---------- routes ----------
 export const routes: Route[] = [
   // ----- public -----
-  rt('GET', /^\/menu$/, 'public', async ({ res }) => {
+  rt('GET', /^\/menu$/, 'shopOrUser', async ({ res }) => {
     const rows = await db().select().from(menuItems).where(and(eq(menuItems.active, true), eq(menuItems.retired, false))).orderBy(menuItems.sortOrder)
-    res.setHeader('cache-control', 'public, max-age=15')
+    res.setHeader('cache-control', 'private, max-age=15')
     return { items: rows.map(menuView) }
   }),
 
-  rt('GET', /^\/menu-image\/(\d+)$/, 'public', async ({ res, params }) => {
+  rt('GET', /^\/menu-image\/(\d+)$/, 'shopOrUser', async ({ res, params }) => {
     const [m] = await db().select({ d: menuItems.imageData }).from(menuItems).where(eq(menuItems.id, Number(params[0])))
     const match = m?.d ? IMG_RE.exec(m.d) : null
     if (!match) throw new HttpError(404, 'Not found')
     res.statusCode = 200
     res.setHeader('content-type', `image/${match[1]}`)
-    res.setHeader('cache-control', 'public, max-age=31536000, immutable')
+    res.setHeader('cache-control', 'private, max-age=31536000, immutable')
     res.setHeader('x-content-type-options', 'nosniff')
     res.end(Buffer.from(match[2], 'base64'))
   }),
 
-  rt('GET', /^\/public\/token$/, 'public', async ({ ip }) => {
+  rt('GET', /^\/public\/token$/, 'shop', async ({ ip }) => {
     if (!(await hit(`token:${ip}`, 60, 600))) throw new HttpError(429, 'Slow down')
     return { token: makeFormToken() }
   }),
 
   // address suggestions while typing (customer page and the app)
-  rt('GET', /^\/places$/, 'public', async ({ query, ip, res }) => {
+  rt('GET', /^\/places$/, 'shopOrUser', async ({ query, ip, res }) => {
     const q = clean(query.get('q'), 120)
     if (!q || q.length < 3) return { suggestions: [] }
     if (!(await hit(`places:${ip}`, 120, 600))) return { suggestions: [] }
@@ -170,7 +170,7 @@ export const routes: Route[] = [
     return { suggestions: await suggestAddresses(q) }
   }),
 
-  rt('POST', /^\/public\/order$/, 'public', async ({ body, ip }) => {
+  rt('POST', /^\/public\/order$/, 'shop', async ({ body, ip }) => {
     if (!(await hit(`order:${ip}`, 5, 600)) || !(await hit('order:all', 120, 3600))) {
       throw new HttpError(429, 'Too many orders — please try again in a few minutes')
     }

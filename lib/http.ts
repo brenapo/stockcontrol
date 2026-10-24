@@ -21,7 +21,9 @@ export type Ctx = {
   ip: string
 }
 
-export type Access = 'public' | 'user' | 'owner' | 'driver'
+export type Access = 'public' | 'user' | 'owner' | 'driver' | 'shop' | 'shopOrUser'
+// The public customer page is OFF unless PUBLIC_ORDERS=true: then 'shop' routes 404 and 'shopOrUser' routes need a login.
+export const publicOrdersOn = () => process.env.PUBLIC_ORDERS === 'true'
 export type Route = { method: string; pattern: RegExp; access: Access; handler: (c: Ctx) => Promise<unknown> | unknown }
 
 export function json(res: Res, status: number, data: unknown, headers: Record<string, string | string[]> = {}) {
@@ -55,12 +57,16 @@ export async function dispatch(routes: Route[], req: Req, res: Res): Promise<voi
     if (method !== 'GET' && method !== 'HEAD' && !sameOrigin(req.headers)) throw new HttpError(403, 'Forbidden')
 
     const { route, params } = matched
+    const access = route.access === 'shop' ? (publicOrdersOn() ? 'public' : null)
+      : route.access === 'shopOrUser' ? (publicOrdersOn() ? 'public' : 'user')
+      : route.access
+    if (access === null) throw new HttpError(404, 'Not found')
     let user: AuthUser | null = null
-    if (route.access !== 'public') {
+    if (access !== 'public') {
       user = await userFromToken(readCookie(req.headers.cookie, COOKIE_NAME))
       if (!user) throw new HttpError(401, 'Please log in')
-      if (route.access === 'owner' && user.role !== 'owner') throw new HttpError(403, 'Owner only')
-      if (route.access === 'driver' && user.role !== 'driver') throw new HttpError(403, 'Drivers only')
+      if (access === 'owner' && user.role !== 'owner') throw new HttpError(403, 'Owner only')
+      if (access === 'driver' && user.role !== 'driver') throw new HttpError(403, 'Drivers only')
     }
     const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? (req.body as Record<string, unknown>) : {}
     const result = await route.handler({ req, res, user, body, params, query: url.searchParams, ip: clientIp(req.headers) })

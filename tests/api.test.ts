@@ -28,6 +28,7 @@ d('Sugar Rush API', () => {
   beforeAll(async () => {
     process.env.DATABASE_URL = url
     process.env.SESSION_SECRET = 'test-secret-test-secret'
+    process.env.PUBLIC_ORDERS = 'true' // most tests exercise the (optional) customer page
     process.env.NODE_ENV = 'test'
     const { getDb } = await import('../lib/db.js')
     const { sql } = await import('drizzle-orm')
@@ -399,6 +400,22 @@ d('Sugar Rush API', () => {
     expect((await call('eve', 'GET', '/stock/me')).json.items.find((i: any) => i.sku === 'i3').qty).toBe(1)
     const log = (await call('owner', 'GET', '/stock/log')).json
     expect(JSON.stringify(log)).toContain('2.5')
+  })
+
+  it('private by default: with PUBLIC_ORDERS off nothing works without a login', async () => {
+    delete process.env.PUBLIC_ORDERS
+    try {
+      expect((await call(null, 'GET', '/public/token')).status).toBe(404)
+      expect((await call(null, 'POST', '/public/order', { token: 'x', items: [{ id: 1, qty: 1 }] })).status).toBe(404)
+      expect((await call(null, 'GET', '/menu')).status).toBe(401)
+      expect((await call(null, 'GET', '/menu-image/1')).status).toBe(401)
+      expect((await call(null, 'GET', '/places?q=123%20Main')).status).toBe(401)
+      expect((await call(null, 'GET', '/orders')).status).toBe(401)
+      expect((await call(null, 'GET', '/stock')).status).toBe(401)
+      expect((await call('dan', 'GET', '/menu')).status).toBe(200) // staff still see the menu
+    } finally {
+      process.env.PUBLIC_ORDERS = 'true'
+    }
   })
 
   it('force logout, password reset and removal kill sessions', async () => {

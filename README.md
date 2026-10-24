@@ -91,3 +91,7 @@ TEST_DATABASE_URL=postgres://user@localhost:5432/sugar_test npm test
 
 ## Address suggestions
 Typing an address shows suggestions from the free ArcGIS World Geocoder (`suggest`, no key), biased to Las Vegas, through `/api/places`. Picking one just fills the text; typing freely always works.
+
+## Private by default
+The app is internal: every screen needs a login made by the owner, and `/` sends you to the login.
+The old public customer order page is off. To turn it back on, set `PUBLIC_ORDERS=true` in Vercel (the page code is in `src/pages/Customer.tsx` and would also need its route back in `src/App.tsx`).
