@@ -52,7 +52,7 @@ export const orders = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     code: serial('code').notNull(),
     status: text('status', { enum: ['new', 'taken', 'delivered'] }).notNull().default('new'),
-    source: text('source', { enum: ['customer', 'owner'] }).notNull(),
+    source: text('source', { enum: ['customer', 'owner', 'driver'] }).notNull(),
     customerName: text('customer_name'),
     phone: text('phone'),
     address: text('address'),

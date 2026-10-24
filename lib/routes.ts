@@ -36,6 +36,8 @@ const ownerFields = {
   ownerOwedCents: z.number().int().min(-10_000_00).max(10_000_00).nullish(),
 }
 const ownerOrderCreate = z.object(ownerFields)
+// drivers log their own customers' deliveries: they set what they collected; the owner sets the split later
+const driverOrderCreate = z.object({ ...customerFields, amountCents: cents.nullish(), paymentMethod: z.enum(['cash', 'zelle']).nullish() })
 const ownerOrderPatch = z.object({
   ...ownerFields,
   status: z.enum(['new', 'taken', 'delivered']).optional(),
@@ -237,7 +239,23 @@ export const routes: Route[] = [
     return { orders: rows.map(serialize) }
   }),
 
-  rt('POST', /^\/orders$/, 'owner', async ({ body }) => {
+  rt('POST', /^\/orders$/, 'user', async ({ body, user }) => {
+    if (user!.role === 'driver') {
+      const b = driverOrderCreate.parse(body)
+      if (!(await hit(`driver-order:${user!.id}`, 60, 3600))) throw new HttpError(429, 'Too many deliveries — try again later')
+      const items = await snapshotItems(b.items ?? [])
+      const fields = textFields(b)
+      if (!items.length && !fields.itemsText && !fields.notes && !fields.address && !fields.customerName) throw new HttpError(400, 'Add something to the delivery')
+      const [o] = await db().insert(orders).values({
+        ...fields, items, source: 'driver', status: 'taken', driverId: user!.id, driverName: user!.name, takenAt: new Date(),
+        amountCents: b.amountCents ?? null, paymentMethod: b.paymentMethod ?? null,
+      }).returning()
+      await Promise.allSettled([
+        notifyNewOrder(o, `New delivery by ${user!.name}`),
+        push('owner', { title: `🚗 ${user!.name} added #${o.code}`, body: [o.address, itemsSummary(o)].filter(Boolean).join(' · ').slice(0, 140), url: '/app', tag: `o-${o.id}` }),
+      ])
+      return { order: serialize(o) }
+    }
     const b = ownerOrderCreate.parse(body)
     const items = await snapshotItems(b.items ?? [])
     const amount = b.amountCents ?? null

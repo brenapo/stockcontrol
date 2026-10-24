@@ -8,7 +8,8 @@ import { Segmented, useToast } from './ui'
 
 type Customer = { name: string | null; phone: string | null; address: string | null; items: { id?: number; qty: number; note?: string }[]; itemsText: string | null }
 
-export function OrderForm({ initial, menu, onSaved }: { initial?: Order; menu: MenuItem[]; onSaved: (o: Order) => void }) {
+// driver = a driver logging their own customer: no customer lookup, no payout split (the owner sets it later)
+export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?: Order; menu: MenuItem[]; onSaved: (o: Order) => void; driver?: boolean }) {
   const { toast, fail } = useToast()
   const edit = !!initial
   const [name, setName] = useState(initial?.customerName ?? '')
@@ -49,7 +50,7 @@ export function OrderForm({ initial, menu, onSaved }: { initial?: Order; menu: M
   }, [edit])
 
   // find returning customers by name or phone
-  const q = useDebounced(!edit ? (phone.replace(/\D/g, '').length >= 4 ? phone : name.trim().length >= 2 ? name : '') : '', 350)
+  const q = useDebounced(!edit && !driver ? (phone.replace(/\D/g, '').length >= 4 ? phone : name.trim().length >= 2 ? name : '') : '', 350)
   useEffect(() => {
     if (!q) return setFound([])
     api<{ customers: Customer[] }>(`/customers?q=${encodeURIComponent(q)}`).then((r) => setFound(r.customers)).catch(() => setFound([]))
@@ -75,7 +76,8 @@ export function OrderForm({ initial, menu, onSaved }: { initial?: Order; menu: M
     try {
       const body: Record<string, unknown> = {
         customerName: name || null, phone: phone || null, address: address || null, notes: notes || null, itemsText: itemsText || null,
-        amountCents: toCents(amount), paymentMethod: pay, driverCutCents: toCents(cut), ownerOwedCents: toCents(owed),
+        amountCents: toCents(amount), paymentMethod: pay,
+        ...(driver ? {} : { driverCutCents: toCents(cut), ownerOwedCents: toCents(owed) }),
       }
       const items = Object.entries(qty).map(([id, n]) => ({ id: Number(id), qty: n, note: which[Number(id)]?.trim() || null }))
       const key = (i: { id?: number; qty: number; note?: string | null }) => `${i.id}:${i.qty}:${i.note ?? ''}`
@@ -90,7 +92,7 @@ export function OrderForm({ initial, menu, onSaved }: { initial?: Order; menu: M
         onSaved(r.order)
       } else {
         const r = await api<{ order: Order }>('/orders', { body })
-        toast('Order created')
+        toast(driver ? 'Added to your deliveries' : 'Order created')
         onSaved(r.order)
         setName(''); setPhone(''); setAddress(''); setNotes(''); setItemsText(''); setQty({}); setWhich({}); setAmount(''); setPay(null); setCut(''); setOwed(''); setOwedTouched(false)
       }
@@ -166,7 +168,7 @@ export function OrderForm({ initial, menu, onSaved }: { initial?: Order; menu: M
       <div className="space-y-3 rounded-3xl bg-sun-soft p-3">
         <div className="grid grid-cols-[1fr_auto] items-end gap-2">
           <div>
-            <label className="label" htmlFor="amt">Amount to collect</label>
+            <label className="label" htmlFor="amt">{driver ? 'Amount collected' : 'Amount to collect'}</label>
             <div className="relative">
               <span className="absolute left-4 top-[13px] text-lg font-black text-mute">$</span>
               <input id="amt" className="field !pl-9" inputMode="decimal" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -177,7 +179,7 @@ export function OrderForm({ initial, menu, onSaved }: { initial?: Order; menu: M
           )}
         </div>
         <Segmented<Pay> value={pay} onChange={setPay} options={[{ value: 'cash', label: 'Cash', icon: 'cash' }, { value: 'zelle', label: 'Zelle', icon: 'bank' }]} />
-        <div className="grid grid-cols-2 gap-2">
+        {!driver && <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="label" htmlFor="cut">Driver keeps</label>
             <div className="relative">
@@ -192,7 +194,7 @@ export function OrderForm({ initial, menu, onSaved }: { initial?: Order; menu: M
               <input id="owed" className="field !pl-9" inputMode="decimal" placeholder="0.00" value={owed} onChange={(e) => { setOwed(e.target.value); setOwedTouched(true) }} />
             </div>
           </div>
-        </div>
+        </div>}
       </div>
 
       <textarea className="field !min-h-[84px] py-3" placeholder="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} />
@@ -210,7 +212,7 @@ export function OrderForm({ initial, menu, onSaved }: { initial?: Order; menu: M
       )}
 
       <button className="btn btn-pink w-full" onClick={save} disabled={busy}>
-        <Icon name="check" />{busy ? 'Saving…' : edit ? 'Save' : 'Create delivery'}
+        <Icon name="check" />{busy ? 'Saving…' : edit ? 'Save' : driver ? 'Add delivery' : 'Create delivery'}
       </button>
     </div>
   )

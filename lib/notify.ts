@@ -50,7 +50,7 @@ export function orderMessage(o: OrderLike, title: string): string {
   return lines.join('\n')
 }
 
-export const notifyNewOrder = (o: OrderLike) => telegram(orderMessage(o, 'New order'))
+export const notifyNewOrder = (o: OrderLike, title = 'New order') => telegram(orderMessage(o, title))
 
 export async function notifyStatus(o: OrderLike, kind: 'taken' | 'delivered'): Promise<void> {
   if (process.env.TELEGRAM_NOTIFY_STATUS === 'false') return

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { api } from '../api'
 import { usePoll } from '../hooks'
-import type { MyStock as MyStockT, Order, Totals } from '../types'
+import type { MenuItem, MyStock as MyStockT, Order, Totals } from '../types'
 import Shell from './Shell'
 import Open from './driver/Open'
 import Mine from './driver/Mine'
@@ -13,6 +13,7 @@ export default function Driver() {
   const { data, error, reload } = usePoll(() => api<{ orders: Order[] }>('/orders'), 4000)
   const { data: sum, reload: reloadSum } = usePoll(() => api<{ summary: Totals }>('/payouts/me'), 15_000)
   const { data: stock, reload: reloadStock } = usePoll(() => api<MyStockT>('/stock/me'), 8000)
+  const { data: menuData } = usePoll(() => api<{ items: MenuItem[] }>('/menu'), 300_000)
   const open = data?.orders.filter((o) => o.status === 'new') ?? []
   const mine = data?.orders.filter((o) => o.driverId && o.status === 'taken') ?? []
   const done = data?.orders.filter((o) => o.status === 'delivered') ?? []
@@ -31,7 +32,7 @@ export default function Driver() {
       ]}
     >
       {tab === 'open' && <Open orders={data ? open : undefined} offline={!!error && !data} onChange={refresh} onTaken={() => setTab('mine')} />}
-      {tab === 'mine' && <Mine orders={data ? mine : undefined} done={done} onChange={refresh} />}
+      {tab === 'mine' && <Mine orders={data ? mine : undefined} done={done} menu={menuData?.items ?? []} onChange={refresh} />}
       {tab === 'stock' && <MyStock data={stock} reload={reloadStock} />}
       {tab === 'money' && <Earnings summary={sum?.summary} />}
     </Shell>

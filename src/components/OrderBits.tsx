@@ -66,6 +66,7 @@ export function OrderBody({ o, showPhone = true }: { o: Order; showPhone?: boole
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-black text-mute">#{o.code}</span>
         <StatusChip o={o} />
+        {o.source === 'driver' && <span className="chip bg-sun-soft text-ink">Driver's customer</span>}
         <span className="ml-auto text-sm font-bold text-mute">{timeAgo(o.createdAt)}</span>
       </div>
       {o.customerName && <div className="text-xl font-black leading-tight">{o.customerName}</div>}

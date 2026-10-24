@@ -10,7 +10,7 @@ export type Order = {
   id: string
   code: number
   status: Status
-  source: 'customer' | 'owner'
+  source: 'customer' | 'owner' | 'driver'
   customerName: string | null
   phone: string | null
   address: string | null

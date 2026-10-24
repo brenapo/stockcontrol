@@ -95,7 +95,7 @@ d('Sugar Rush API', () => {
     await call('dan', 'POST', '/auth/login', { username: 'dan', password: 'driverpass1' })
     await call('eve', 'POST', '/auth/login', { username: 'eve', password: 'driverpass2' })
     for (const [m, p, b] of [
-      ['POST', '/orders', { amountCents: 100 }], ['PUT', '/admin/menu/1', { name: 'x' }], ['GET', '/admin/menu', undefined],
+      ['PUT', '/admin/menu/1', { name: 'x' }], ['GET', '/admin/menu', undefined],
       ['POST', '/users', { username: 'zed', name: 'Z', password: 'longenough1' }], ['GET', '/users', undefined],
       ['GET', '/payouts', undefined], ['POST', '/payouts/settle', { driverId: '00000000-0000-4000-8000-000000000000' }],
       ['GET', '/customers?q=ab', undefined], ['POST', '/users/logout-all', undefined],
@@ -333,6 +333,26 @@ d('Sugar Rush API', () => {
     expect((await call('owner', 'PUT', '/stock/settings', { lowThreshold: 1 })).json.threshold).toBe(1)
     expect((await call('owner', 'GET', '/stock')).json.low.map((l: any) => l.name)).not.toContain('Key Lime Pie')
     expect((await call('owner', 'PUT', '/stock/settings', { lowThreshold: 5 })).status).toBe(200)
+  })
+
+  it('drivers add their own deliveries: assigned to them, no split, stock goes down', async () => {
+    expect((await call('dan', 'POST', '/orders', {})).status).toBe(400) // empty
+    const r = await call('dan', 'POST', '/orders', {
+      customerName: 'Neighbor', address: '9 Fudge Ave', items: [{ id: 1, qty: 1 }], amountCents: 900, paymentMethod: 'cash',
+      driverCutCents: 900, ownerOwedCents: 0, status: 'delivered', driverId: '00000000-0000-4000-8000-000000000000',
+    })
+    expect(r.status).toBe(200)
+    const o = r.json.order
+    expect(o).toMatchObject({ source: 'driver', status: 'taken', driverName: 'Dan', amountCents: 900, paymentMethod: 'cash', driverCutCents: null, ownerOwedCents: null })
+    // not offered to other drivers; owner sees it
+    expect((await call('eve', 'GET', '/orders')).json.orders.map((x: any) => x.id)).not.toContain(o.id)
+    expect((await call('owner', 'GET', '/orders')).json.orders.map((x: any) => x.id)).toContain(o.id)
+    const before = (await call('dan', 'GET', '/stock/me')).json.items.find((i: any) => i.sku === 'i1')?.qty ?? 0
+    expect((await call('dan', 'POST', `/orders/${o.id}/deliver`)).status).toBe(200)
+    expect((await call('dan', 'GET', '/stock/me')).json.items.find((i: any) => i.sku === 'i1').qty).toBe(before - 1)
+    // owner sets the split afterwards
+    const p = await call('owner', 'PATCH', `/orders/${o.id}`, { driverCutCents: 300 })
+    expect(p.json.order).toMatchObject({ driverCutCents: 300, ownerOwedCents: 600 })
   })
 
   it('force logout, password reset and removal kill sessions', async () => {

@@ -3,13 +3,15 @@ import { api } from '../../api'
 import { appleRouteUrl, googleRouteUrl, MAX_STOPS } from '../../contact'
 import { Icon } from '../../components/Icon'
 import { ContactButtons, MapsButton, Money, OrderBody } from '../../components/OrderBits'
+import { OrderForm } from '../../components/OrderForm'
 import { Empty, Spinner, useToast } from '../../components/ui'
-import type { Order } from '../../types'
+import type { MenuItem, Order } from '../../types'
 
-export default function Mine({ orders, done, onChange }: { orders?: Order[]; done: Order[]; onChange: () => void }) {
+export default function Mine({ orders, done, menu, onChange }: { orders?: Order[]; done: Order[]; menu: MenuItem[]; onChange: () => void }) {
   const { toast, fail } = useToast()
   const [sel, setSel] = useState<string[]>([])
   const [busy, setBusy] = useState<string | null>(null)
+  const [adding, setAdding] = useState(false)
 
   // drop selections for orders that are no longer in the list
   useEffect(() => { if (orders) setSel((s) => s.filter((id) => orders.some((o) => o.id === id))) }, [orders])
@@ -32,7 +34,18 @@ export default function Mine({ orders, done, onChange }: { orders?: Order[]; don
 
   return (
     <div className="space-y-3 pb-24">
-      {orders.length === 0 && <Empty icon="route" text="Nothing taken yet" />}
+      {adding ? (
+        <section className="card space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-black">New delivery</h2>
+            <button className="btn btn-ghost btn-sm !w-11 !px-0" onClick={() => setAdding(false)} aria-label="Close"><Icon name="x" size={20} /></button>
+          </div>
+          <OrderForm driver menu={menu} onSaved={() => { setAdding(false); onChange() }} />
+        </section>
+      ) : (
+        <button className="btn btn-pink w-full" onClick={() => setAdding(true)}><Icon name="plus" />New delivery</button>
+      )}
+      {orders.length === 0 && !adding && <Empty icon="route" text="Nothing taken yet" />}
       {orders.map((o) => (
         <article key={o.id} className={`card space-y-3 ${sel.includes(o.id) ? 'ring-4 ring-sky' : ''}`}>
           <div className="flex items-start gap-3">
