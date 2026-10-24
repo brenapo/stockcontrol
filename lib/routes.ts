@@ -11,7 +11,7 @@ import {
 } from './security.js'
 import { applyDelivery, alertLow, transfer, skuFor, STORE, type Actor } from './stock.js'
 import { stockRoutes } from './stockRoutes.js'
-import { clean, digits, STORE_TZ } from './util.js'
+import { builtInImage, clean, digits, STORE_TZ } from './util.js'
 
 const db = () => getDb()
 
@@ -126,7 +126,7 @@ function validImage(dataUrl: string): boolean {
 
 const menuView = (m: typeof menuItems.$inferSelect) => ({
   id: m.id, letter: m.letter, name: m.name, priceCents: m.priceCents, active: m.active, allowNote: m.allowNote,
-  imageUrl: m.imageData ? `/api/menu-image/${m.id}?v=${m.imageVersion}` : `/candy/${m.letter.toLowerCase()}.svg`,
+  imageUrl: m.imageData ? `/api/menu-image/${m.id}?v=${m.imageVersion}` : builtInImage(m.letter),
   customImage: !!m.imageData,
 })
 

@@ -4,14 +4,14 @@ import { getDb } from './db.js'
 import { HttpError, rt, type Route } from './http.js'
 import { menuItems, settings, stock, stockLog, users } from './schema.js'
 import { alertLow, manualAdjust, manualSet, settingThreshold, skuFor, STORE, transfer, type Actor, type Move, type StoreChange } from './stock.js'
-import { clean, STORE_TZ } from './util.js'
+import { builtInImage, clean, STORE_TZ } from './util.js'
 
 const db = () => getDb()
 const holderSchema = z.union([z.literal(STORE), z.string().uuid()])
 const itemInput = z.object({ itemId: z.number().int(), name: z.string().max(80).nullish() })
 
 type MenuRow = typeof menuItems.$inferSelect
-const imageOf = (m: MenuRow) => (m.imageData ? `/api/menu-image/${m.id}?v=${m.imageVersion}` : `/candy/${m.letter.toLowerCase()}.svg`)
+const imageOf = (m: MenuRow) => (m.imageData ? `/api/menu-image/${m.id}?v=${m.imageVersion}` : builtInImage(m.letter))
 
 async function resolveItem(itemId: number, name?: string | null): Promise<{ sku: string; name: string }> {
   const [m] = await db().select().from(menuItems).where(and(eq(menuItems.id, itemId), eq(menuItems.retired, false)))

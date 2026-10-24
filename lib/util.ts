@@ -21,3 +21,10 @@ export const STORE_TZ = (() => {
   const t = process.env.STORE_TZ || 'America/New_York'
   try { new Intl.DateTimeFormat('en', { timeZone: t }); return t } catch { return 'America/New_York' }
 })()
+
+// Built-in sweet image: real photo (public/candy/<key>.webp) when we have one, else the drawn SVG.
+const PHOTOS = new Set(['cannoli', 'kitkat', 'eclair', 'xocolat', 'amorade', 'other'])
+export const builtInImage = (key: string) => {
+  const k = key.toLowerCase()
+  return PHOTOS.has(k) ? `/candy/${k}.webp` : `/candy/${k}.svg`
+}
