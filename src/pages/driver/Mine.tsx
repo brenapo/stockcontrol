@@ -7,11 +7,11 @@ import { OrderForm } from '../../components/OrderForm'
 import { Empty, Spinner, useToast } from '../../components/ui'
 import type { MenuItem, Order } from '../../types'
 
-export default function Mine({ orders, done, menu, onChange }: { orders?: Order[]; done: Order[]; menu: MenuItem[]; onChange: () => void }) {
+export default function Mine({ orders, done, menu, onChange, startAdding = false }: { orders?: Order[]; done: Order[]; menu: MenuItem[]; onChange: () => void; startAdding?: boolean }) {
   const { toast, fail } = useToast()
   const [sel, setSel] = useState<string[]>([])
   const [busy, setBusy] = useState<string | null>(null)
-  const [adding, setAdding] = useState(false)
+  const [adding, setAdding] = useState(startAdding)
 
   // drop selections for orders that are no longer in the list
   useEffect(() => { if (orders) setSel((s) => s.filter((id) => orders.some((o) => o.id === id))) }, [orders])

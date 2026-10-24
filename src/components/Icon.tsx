@@ -33,6 +33,8 @@ const P: Record<string, string> = {
   layers: 'M12 2.5l9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 16.5l9 5 9-5',
   more: 'M5 12h.01M12 12h.01M19 12h.01',
   swap: 'M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7',
+  download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
+  share: 'M12 15V3M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1',
   repeat: 'M17 3l3 3-3 3M4 11V9a3 3 0 013-3h13M7 21l-3-3 3-3M20 13v2a3 3 0 01-3 3H4',
 }
 

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { takeShortcut } from '../shortcut'
 import { api } from '../api'
 import { usePoll } from '../hooks'
 import type { MenuItem, Order, OwnerStock } from '../types'
@@ -11,7 +12,7 @@ import Team from './owner/Team'
 import Stock from './owner/Stock'
 
 export default function Owner() {
-  const [tab, setTab] = useState('orders')
+  const [tab, setTab] = useState(() => (takeShortcut() === 'new' ? 'new' : 'orders'))
   const [more, setMore] = useState<'menu' | 'team'>('menu')
   const { data: menu, reload: reloadMenu } = usePoll(() => api<{ items: MenuItem[] }>('/admin/menu'), 60_000)
   const { data } = usePoll(() => api<{ orders: Order[] }>('/orders'), 5000)

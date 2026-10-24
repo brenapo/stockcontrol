@@ -150,7 +150,7 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
                   </div>
                 ) : null}
                 {qty[m.id] && m.allowNote ? (
-                  <input className="field !min-h-[40px] mt-1 !rounded-lg !px-2 !text-sm" placeholder="Which sweet?" maxLength={40} value={which[m.id] ?? ''} onChange={(e) => setWhich({ ...which, [m.id]: e.target.value })} aria-label="Which sweet?" />
+                  <input className="field !min-h-[40px] mt-1 !rounded-lg !px-2 !text-base" placeholder="Which sweet?" maxLength={40} value={which[m.id] ?? ''} onChange={(e) => setWhich({ ...which, [m.id]: e.target.value })} aria-label="Which sweet?" />
                 ) : null}
               </div>
             ))}

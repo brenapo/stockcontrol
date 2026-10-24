@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AddressInput } from '../components/AddressInput'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth'
+import { UpdateBanner } from '../components/PwaBanners'
 import { api } from '../api'
 import { Icon } from '../components/Icon'
 import { Logo, Sheet, Spinner, useToast } from '../components/ui'
@@ -109,6 +110,7 @@ export default function Customer() {
           {user && <Link to="/app" className="btn btn-sm btn-pink"><Icon name="box" size={20} />App</Link>}
         </div>
       </header>
+      <UpdateBanner />
 
       {!menu ? <Spinner /> : (
         <div className="grid grid-cols-2 gap-3 px-4 sm:grid-cols-3">

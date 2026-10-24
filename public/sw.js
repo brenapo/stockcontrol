@@ -1,6 +1,6 @@
 // Sugar Rush service worker: offline app shell + push notifications.
 // API responses are never cached (they contain customer data).
-const VERSION = 'v2'
+const VERSION = 'dev' // replaced with the build id at build time
 const SHELL = `sr-shell-${VERSION}`
 const ASSETS = `sr-assets-${VERSION}`
 
@@ -21,7 +21,7 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request
   const url = new URL(req.url)
-  if (req.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/')) return
+  if (req.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/') || url.pathname === '/version.json') return
 
   // page loads: network first, fall back to the cached shell when offline
   if (req.mode === 'navigate') {

@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { Icon } from '../components/Icon'
+import { InstallBanner, UpdateBanner } from '../components/PwaBanners'
 import { Logo, useToast } from '../components/ui'
 import { useOnline } from '../hooks'
 import { disablePush, enablePush, pushEnabled, pushSupported } from '../push'
@@ -36,6 +37,9 @@ export default function Shell({ tabs, tab, onTab, children }: { tabs: Tab[]; tab
           <button className="btn btn-sm btn-ghost !w-11 !px-0" onClick={logout} aria-label="Log out"><Icon name="logout" size={20} /></button>
         </div>
       </header>
+
+      <UpdateBanner />
+      <InstallBanner />
 
       {!online && (
         <div className="mx-4 mb-2 flex items-center gap-2 rounded-2xl bg-red-600 px-4 py-3 font-extrabold text-white"><Icon name="signal" />No connection</div>

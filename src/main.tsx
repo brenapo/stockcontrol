@@ -5,6 +5,7 @@ import App from './App'
 import { AuthProvider } from './auth'
 import { ToastProvider } from './components/ui'
 import './index.css'
+import { startPwa } from './pwa'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -18,6 +19,4 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}))
-}
+startPwa()
