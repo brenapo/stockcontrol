@@ -11,15 +11,15 @@ function QtyBox({ value, onSet }: { value: number; onSet: (n: number) => void })
   useEffect(() => setText(String(value)), [value])
   const commit = () => {
     const n = Number(text)
-    if (text.trim() === '' || !Number.isInteger(n) || n < 0) return setText(String(value))
+    if (text.trim() === '' || !Number.isInteger(n * 2) || n < 0) return setText(String(value))
     if (n !== value) onSet(n)
   }
   return (
     <input
       className={`h-[48px] w-[72px] rounded-xl border-2 border-line bg-card text-center text-2xl font-black focus:border-pink focus:outline-none ${value < 0 ? 'text-red-600' : ''}`}
-      inputMode="numeric"
+      inputMode="decimal"
       value={text}
-      onChange={(e) => setText(e.target.value.replace(/[^0-9-]/g, ''))}
+      onChange={(e) => setText(e.target.value.replace(',', '.').replace(/[^0-9.-]/g, ''))}
       onFocus={(e) => e.target.select()}
       onBlur={commit}
       onKeyDown={(e) => e.key === 'Enter' && (e.currentTarget.blur())}
@@ -71,9 +71,9 @@ export default function StockList({ holder, rows, otherItemId, onChanged, hideZe
               {qty < 0 && <div className="text-xs font-extrabold uppercase text-red-600">Below zero</div>}
               {qty >= 0 && r.low && <div className="text-xs font-extrabold uppercase text-orange">Low</div>}
             </div>
-            <button className="btn btn-ghost btn-sm !w-11 !px-0" onClick={() => send(r, { delta: -1 }, r.sku, -1)} aria-label={`Less ${r.name}`}><Icon name="minus" size={20} /></button>
+            <button className="btn btn-ghost btn-sm !w-11 !px-0" onClick={() => send(r, { delta: -0.5 }, r.sku, -0.5)} aria-label={`Less ${r.name}`}><Icon name="minus" size={20} /></button>
             <QtyBox value={qty} onSet={(n) => send(r, { set: n }, r.sku, 0)} />
-            <button className="btn btn-pink btn-sm !w-11 !px-0" onClick={() => send(r, { delta: 1 }, r.sku, 1)} aria-label={`More ${r.name}`}><Icon name="plus" size={20} /></button>
+            <button className="btn btn-pink btn-sm !w-11 !px-0" onClick={() => send(r, { delta: 0.5 }, r.sku, 0.5)} aria-label={`More ${r.name}`}><Icon name="plus" size={20} /></button>
           </div>
         )
       })}

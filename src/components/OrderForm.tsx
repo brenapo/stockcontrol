@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
-import { fromCents, money, toCents } from '../format'
+import { fromCents, money, stepDown, stepUp, toCents } from '../format'
 import { useDebounced } from '../hooks'
 import type { MenuItem, Order, Pay, Status, User } from '../types'
 import { AddressInput } from './AddressInput'
@@ -36,7 +36,7 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
   const [busy, setBusy] = useState(false)
   const [found, setFound] = useState<Customer[]>([])
 
-  const menuTotal = useMemo(() => menu.reduce((s, m) => s + (qty[m.id] ?? 0) * m.priceCents, 0), [menu, qty])
+  const menuTotal = useMemo(() => menu.reduce((s, m) => s + Math.round((qty[m.id] ?? 0) * m.priceCents), 0), [menu, qty])
   const picked = menu.filter((m) => qty[m.id])
 
   // owner owes = amount to collect − driver's cut, until the owner types their own number
@@ -67,7 +67,8 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
 
   const bump = (id: number, d: number) =>
     setQty((c) => {
-      const n = Math.max(0, Math.min(99, (c[id] ?? 0) + d))
+      const cur = c[id] ?? 0
+      const n = d > 0 ? stepUp(cur) : stepDown(cur)
       const { [id]: _, ...rest } = c
       return n ? { ...rest, [id]: n } : rest
     })

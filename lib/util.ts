@@ -6,6 +6,9 @@ export function clean(value: unknown, max: number): string | null {
   return s ? s.slice(0, max) : null
 }
 
+// Quantities go in steps of 0.5 (1, 1.5, 2, 2.5 …)
+export const isHalfStep = (n: number) => Number.isFinite(n) && Number.isInteger(n * 2)
+
 export const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 export function digits(phone: string | null | undefined): string | null {

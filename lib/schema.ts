@@ -1,7 +1,6 @@
 import { sql } from 'drizzle-orm'
 import {
-  boolean, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp, uniqueIndex, uuid,
-} from 'drizzle-orm/pg-core'
+  boolean, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp, uniqueIndex, uuid, doublePrecision } from 'drizzle-orm/pg-core'
 
 export type OrderItem = { id?: number; sku?: string; name: string; qty: number; priceCents?: number | null; note?: string }
 
@@ -100,7 +99,7 @@ export const stock = pgTable(
     holder: text('holder').notNull(),
     sku: text('sku').notNull(),
     name: text('name').notNull(),
-    qty: integer('qty').notNull().default(0),
+    qty: doublePrecision('qty').notNull().default(0), // steps of 0.5
   },
   (t) => [primaryKey({ columns: [t.holder, t.sku] })],
 )
@@ -119,7 +118,7 @@ export const stockLog = pgTable(
     toName: text('to_name'),
     sku: text('sku').notNull(),
     name: text('name').notNull(),
-    qty: integer('qty').notNull(), // always positive: the amount that moved
+    qty: doublePrecision('qty').notNull(), // always positive: the amount that moved
     orderId: uuid('order_id'),
     note: text('note'),
   },

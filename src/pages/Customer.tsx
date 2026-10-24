@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { Icon } from '../components/Icon'
 import { Logo, Sheet, Spinner, useToast } from '../components/ui'
-import { money } from '../format'
+import { money, stepDown, stepUp } from '../format'
 import type { MenuItem } from '../types'
 
 type Details = { name: string; phone: string; address: string; notes: string }
@@ -35,10 +35,11 @@ export default function Customer() {
   }, [fail])
 
   const count = useMemo(() => Object.values(cart).reduce((a, b) => a + b, 0), [cart])
-  const total = useMemo(() => (menu ?? []).reduce((s, m) => s + (cart[m.id] ?? 0) * m.priceCents, 0), [menu, cart])
+  const total = useMemo(() => (menu ?? []).reduce((s, m) => s + Math.round((cart[m.id] ?? 0) * m.priceCents), 0), [menu, cart])
   const set = (id: number, d: number) =>
     setCart((c) => {
-      const n = Math.max(0, Math.min(99, (c[id] ?? 0) + d))
+      const cur = c[id] ?? 0
+      const n = d > 0 ? stepUp(cur) : stepDown(cur)
       const { [id]: _, ...rest } = c
       return n ? { ...rest, [id]: n } : rest
     })
@@ -163,7 +164,7 @@ export default function Customer() {
                     <span className="flex-1 truncate font-extrabold">{m.name}</span>
                   )}
                   <button className="btn btn-ghost btn-sm !w-11 !px-0" onClick={() => set(m.id, -1)} aria-label="Less"><Icon name="minus" size={18} /></button>
-                  <span className="w-6 text-center text-xl font-black">{cart[m.id]}</span>
+                  <span className="w-10 text-center text-xl font-black">{cart[m.id]}</span>
                   <button className="btn btn-pink btn-sm !w-11 !px-0" onClick={() => set(m.id, 1)} aria-label="More"><Icon name="plus" size={18} /></button>
                 </div>
               ))}

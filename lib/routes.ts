@@ -12,14 +12,14 @@ import {
 import { applyDelivery, alertLow, transfer, skuFor, STORE, type Actor } from './stock.js'
 import { stockRoutes } from './stockRoutes.js'
 import { suggestAddresses } from './places.js'
-import { builtInImage, clean, digits, STORE_TZ } from './util.js'
+import { builtInImage, clean, digits, isHalfStep, STORE_TZ } from './util.js'
 
 const db = () => getDb()
 
 // ---------- shared validation ----------
 const cents = z.number().int().min(0).max(10_000_00)
 const text = (max: number) => z.string().max(max).nullish()
-const itemRef = z.object({ id: z.number().int(), qty: z.number().int().min(1).max(99), note: z.string().max(80).nullish() })
+const itemRef = z.object({ id: z.number().int(), qty: z.number().min(0.5).max(99).refine(isHalfStep, 'Use steps of 0.5'), note: z.string().max(80).nullish() })
 
 const customerFields = {
   customerName: text(120),

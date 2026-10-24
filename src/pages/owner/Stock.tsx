@@ -119,7 +119,7 @@ function Transfer({ data, onClose, onDone }: { data: OwnerStock; onClose: () => 
     const it = data.items.find((i) => i.sku === sku)!
     return mode === 'give' ? it.store : (it.byDriver[driver] ?? 0)
   }
-  const bump = (sku: string, d: number) => setQty((q) => ({ ...q, [sku]: Math.max(0, Math.min(avail(sku), (q[sku] ?? 0) + d)) }))
+  const bump = (sku: string, d: number) => setQty((q) => ({ ...q, [sku]: Math.max(0, Math.min(avail(sku), (q[sku] ?? 0) + d / 2)) })) // steps of 0.5
   const picked = data.items.filter((i) => (qty[i.sku] ?? 0) > 0)
 
   const submit = async () => {

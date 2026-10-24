@@ -4,7 +4,7 @@ import { getDb } from './db.js'
 import { HttpError, rt, type Route } from './http.js'
 import { menuItems, settings, stock, stockLog, users } from './schema.js'
 import { alertLow, manualAdjust, manualSet, settingThreshold, skuFor, STORE, transfer, type Actor, type Move, type StoreChange } from './stock.js'
-import { builtInImage, clean, STORE_TZ } from './util.js'
+import { builtInImage, clean, isHalfStep, STORE_TZ } from './util.js'
 
 const db = () => getDb()
 const holderSchema = z.union([z.literal(STORE), z.string().uuid()])
@@ -81,8 +81,8 @@ export const stockRoutes: Route[] = [
   rt('POST', /^\/stock\/adjust$/, 'user', async ({ user, body }) => {
     const b = itemInput.extend({
       holder: holderSchema.optional(),
-      delta: z.number().int().min(-10_000).max(10_000).optional(),
-      set: z.number().int().min(0).max(100_000).optional(),
+      delta: z.number().min(-10_000).max(10_000).refine(isHalfStep, 'Use steps of 0.5').optional(),
+      set: z.number().min(0).max(100_000).refine(isHalfStep, 'Use steps of 0.5').optional(),
     }).refine((v) => (v.delta === undefined) !== (v.set === undefined), 'Send delta or set').parse(body)
     const holder = b.holder ?? (user!.role === 'driver' ? user!.id : STORE)
     if (user!.role === 'driver' && holder !== user!.id) throw new HttpError(403, 'You can only change your own stock')
@@ -100,7 +100,7 @@ export const stockRoutes: Route[] = [
   rt('POST', /^\/stock\/transfer$/, 'owner', async ({ user, body }) => {
     const b = z.object({
       from: holderSchema, to: holderSchema,
-      items: z.array(itemInput.extend({ qty: z.number().int().min(1).max(10_000) })).min(1, 'Pick at least one sweet').max(60),
+      items: z.array(itemInput.extend({ qty: z.number().min(0.5).max(10_000).refine(isHalfStep, 'Use steps of 0.5') })).min(1, 'Pick at least one sweet').max(60),
     }).refine((v) => v.from !== v.to, 'Pick two different places').parse(body)
     await assertHolder(b.from)
     await assertHolder(b.to)

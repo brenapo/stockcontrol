@@ -361,6 +361,20 @@ d('Sugar Rush API', () => {
     expect(p.json.order).toMatchObject({ driverCutCents: 300, ownerOwedCents: 600 })
   })
 
+  it('quantities go in steps of 0.5 for orders and stock', async () => {
+    // eve sets her Éclair (item 3) stock to 4, then logs a delivery of 1.5
+    expect((await call('eve', 'POST', '/stock/adjust', { itemId: 3, set: 4 })).json.qty).toBe(4)
+    expect((await call('eve', 'POST', '/stock/adjust', { itemId: 3, delta: 0.25 })).status).toBe(400) // not a half step
+    expect((await call('eve', 'POST', '/stock/adjust', { itemId: 3, delta: -0.5 })).json.qty).toBe(3.5)
+    expect((await call('eve', 'POST', '/orders', { address: '5 Half Way', items: [{ id: 3, qty: 1.3 }] })).status).toBe(400)
+    const r = await call('eve', 'POST', '/orders', { address: '5 Half Way', items: [{ id: 3, qty: 1.5 }, { id: 3, qty: 1 }] })
+    expect(r.json.order.items[0]).toMatchObject({ sku: 'i3', qty: 2.5 }) // merged
+    expect((await call('eve', 'POST', `/orders/${r.json.order.id}/deliver`)).status).toBe(200)
+    expect((await call('eve', 'GET', '/stock/me')).json.items.find((i: any) => i.sku === 'i3').qty).toBe(1)
+    const log = (await call('owner', 'GET', '/stock/log')).json
+    expect(JSON.stringify(log)).toContain('2.5')
+  })
+
   it('force logout, password reset and removal kill sessions', async () => {
     const users = (await call('owner', 'GET', '/users')).json.users
     const dan = users.find((u: any) => u.username === 'dan')

@@ -18,6 +18,10 @@ export function timeAgo(iso: string): string {
   return `${Math.floor(s / 86400)}d`
 }
 
+// Quantities: first tap = 1, then +0.5 (1, 1.5, 2 …); going down from 1 removes it
+export const stepUp = (q: number, max = 99) => Math.min(max, q <= 0 ? 1 : q + 0.5)
+export const stepDown = (q: number) => (q <= 1 ? 0 : q - 0.5)
+
 export function summary(o: { items: { qty: number; name: string }[]; itemsText: string | null }): string {
   return [...o.items.map((i) => `${i.qty}× ${i.name}`), o.itemsText].filter(Boolean).join(', ')
 }
