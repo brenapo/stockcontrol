@@ -3,6 +3,7 @@ import { api } from '../api'
 import { fromCents, money, toCents } from '../format'
 import { useDebounced } from '../hooks'
 import type { MenuItem, Order, Pay, Status, User } from '../types'
+import { AddressInput } from './AddressInput'
 import { Icon } from './Icon'
 import { Segmented, useToast } from './ui'
 
@@ -123,10 +124,7 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
           ))}
         </div>
       )}
-      <div className="relative">
-        <Icon name="pin" className="pointer-events-none absolute left-4 top-[16px] text-mute" />
-        <input className="field !pl-12" placeholder="Address" value={address} onChange={(e) => setAddress(e.target.value)} maxLength={300} autoComplete="off" />
-      </div>
+      <AddressInput value={address} onChange={setAddress} withIcon />
 
       <div className="space-y-2 rounded-3xl bg-card p-3">
         <div className="flex items-center justify-between">

@@ -63,6 +63,12 @@ d('Sugar Rush API', () => {
     expect((await fetch(`${base}/api/index?__path=`)).status).toBe(404) // bare /api has no route
   })
 
+  it('address suggestions are off and harmless without a Google key', async () => {
+    const r = await call(null, 'GET', '/places?q=123%20Main')
+    expect(r.status).toBe(200)
+    expect(r.json.suggestions).toEqual([])
+  })
+
   it('serves the public menu and nothing private', async () => {
     const r = await call(null, 'GET', '/menu')
     expect(r.json.items.map((i: any) => i.name)).toEqual(['Cannoli', 'Key Lime Pie', 'Éclair', 'Maria Mole', 'Xocolat', 'Amorade', 'Other'])

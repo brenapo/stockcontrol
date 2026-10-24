@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { AddressInput } from '../components/AddressInput'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { Icon } from '../components/Icon'
@@ -170,7 +171,7 @@ export default function Customer() {
 
             <input className="field" placeholder="Name" autoComplete="name" value={details.name} onChange={(e) => setDetails({ ...details, name: e.target.value })} maxLength={120} />
             <input className="field" placeholder="Phone" type="tel" autoComplete="tel" inputMode="tel" value={details.phone} onChange={(e) => setDetails({ ...details, phone: e.target.value })} maxLength={40} />
-            <input className="field" placeholder="Address" autoComplete="street-address" value={details.address} onChange={(e) => setDetails({ ...details, address: e.target.value })} maxLength={300} />
+            <AddressInput value={details.address} onChange={(v) => setDetails({ ...details, address: v })} />
             <textarea className="field !min-h-[84px] py-3" placeholder="Notes" value={details.notes} onChange={(e) => setDetails({ ...details, notes: e.target.value })} maxLength={500} />
             {/* honeypot: invisible to people, bots fill it */}
             <input tabIndex={-1} autoComplete="off" aria-hidden="true" name="website" value={honey} onChange={(e) => setHoney(e.target.value)} className="absolute -left-[9999px] h-0 w-0 opacity-0" />

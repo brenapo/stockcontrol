@@ -11,6 +11,7 @@ import {
 } from './security.js'
 import { applyDelivery, alertLow, transfer, skuFor, STORE, type Actor } from './stock.js'
 import { stockRoutes } from './stockRoutes.js'
+import { placesEnabled, suggestAddresses } from './places.js'
 import { builtInImage, clean, digits, STORE_TZ } from './util.js'
 
 const db = () => getDb()
@@ -158,6 +159,17 @@ export const routes: Route[] = [
   rt('GET', /^\/public\/token$/, 'public', async ({ ip }) => {
     if (!(await hit(`token:${ip}`, 60, 600))) throw new HttpError(429, 'Slow down')
     return { token: makeFormToken() }
+  }),
+
+  // address suggestions while typing (customer page and the app)
+  rt('GET', /^\/places$/, 'public', async ({ query, ip, res }) => {
+    if (!placesEnabled()) return { suggestions: [] }
+    const q = clean(query.get('q'), 120)
+    if (!q || q.length < 3) return { suggestions: [] }
+    if (!(await hit(`places:${ip}`, 120, 600))) return { suggestions: [] }
+    const session = query.get('s')
+    res.setHeader('cache-control', 'private, max-age=300')
+    return { suggestions: await suggestAddresses(q, session && /^[A-Za-z0-9-]{8,64}$/.test(session) ? session : undefined) }
   }),
 
   rt('POST', /^\/public\/order$/, 'public', async ({ body, ip }) => {
