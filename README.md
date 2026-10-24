@@ -89,5 +89,5 @@ TEST_DATABASE_URL=postgres://user@localhost:5432/sugar_test npm test
 - Stock: every change goes through the server in one database transaction (row locks, all-or-nothing transfers) and is written to the history log; drivers can never touch the store or another driver.
 - Input is validated with zod, control characters stripped, Telegram messages HTML-escaped, SQL is parameterised (Drizzle).
 
-## Address suggestions (optional)
-Set `GOOGLE_MAPS_API_KEY` in Vercel (Secret) to show address suggestions while typing, biased to Las Vegas. The key stays on the server (`/api/places`). Without it the address field is plain text. In Google Cloud enable **Places API (New)** and restrict the key to that API.
+## Address suggestions
+Typing an address shows suggestions from the free ArcGIS World Geocoder (`suggest`, no key), biased to Las Vegas, through `/api/places`. Picking one just fills the text; typing freely always works.

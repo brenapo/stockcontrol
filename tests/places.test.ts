@@ -1,34 +1,25 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { suggestAddresses } from '../lib/places'
 
-afterEach(() => { vi.unstubAllGlobals(); delete process.env.GOOGLE_MAPS_API_KEY })
+afterEach(() => vi.unstubAllGlobals())
 
-describe('address suggestions', () => {
-  it('does nothing without a key', async () => {
-    const f = vi.fn()
-    vi.stubGlobal('fetch', f)
-    expect(await suggestAddresses('123 Main')).toEqual([])
-    expect(f).not.toHaveBeenCalled()
-  })
-
-  it('asks Google with the key server-side, biased to Las Vegas, and returns text only', async () => {
-    process.env.GOOGLE_MAPS_API_KEY = 'test-key'
+describe('address suggestions (ArcGIS)', () => {
+  it('asks ArcGIS biased to Las Vegas, no key, and returns address text only', async () => {
     const f = vi.fn(async () => new Response(JSON.stringify({ suggestions: [
-      { placePrediction: { text: { text: '123 Main St, Las Vegas, NV, USA' } } }, { queryPrediction: {} },
+      { text: '123 Main St, Las Vegas, NV, 89101, USA', isCollection: false }, { text: 'Main St Coffee', isCollection: true },
     ] })))
     vi.stubGlobal('fetch', f)
-    expect(await suggestAddresses('123 Main', 'abcdef123')).toEqual(['123 Main St, Las Vegas, NV, USA'])
-    const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit]
-    expect(url).toContain('places:autocomplete')
-    expect((init.headers as Record<string, string>)['X-Goog-Api-Key']).toBe('test-key')
-    const body = JSON.parse(init.body as string)
-    expect(body).toMatchObject({ input: '123 Main', sessionToken: 'abcdef123', includedRegionCodes: ['us'] })
-    expect(body.locationBias.circle.center.latitude).toBeCloseTo(36.17, 1)
+    expect(await suggestAddresses('123 Main')).toEqual(['123 Main St, Las Vegas, NV, 89101, USA'])
+    const url = new URL(String((f.mock.calls[0] as unknown as [URL])[0]))
+    expect(url.hostname).toBe('geocode.arcgis.com')
+    expect(url.searchParams.get('text')).toBe('123 Main')
+    expect(url.searchParams.get('location')).toBe('-115.1398,36.1699')
+    expect(url.searchParams.get('countryCode')).toBe('USA')
+    expect(url.searchParams.has('token')).toBe(false)
   })
 
-  it('fails quietly when Google errors', async () => {
-    process.env.GOOGLE_MAPS_API_KEY = 'test-key'
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('nope', { status: 403 })))
+  it('fails quietly when the service errors', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('nope', { status: 500 })))
     expect(await suggestAddresses('123 Main')).toEqual([])
   })
 })

@@ -63,8 +63,8 @@ d('Sugar Rush API', () => {
     expect((await fetch(`${base}/api/index?__path=`)).status).toBe(404) // bare /api has no route
   })
 
-  it('address suggestions are off and harmless without a Google key', async () => {
-    const r = await call(null, 'GET', '/places?q=123%20Main')
+  it('address suggestions: short queries return nothing without calling out', async () => {
+    const r = await call(null, 'GET', '/places?q=12')
     expect(r.status).toBe(200)
     expect(r.json.suggestions).toEqual([])
   })

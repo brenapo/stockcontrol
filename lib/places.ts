@@ -1,29 +1,19 @@
-// Address suggestions via Google Places Autocomplete (New). The API key never leaves the server.
-// Without GOOGLE_MAPS_API_KEY this returns nothing and the address field stays plain text.
-const LAS_VEGAS = { latitude: 36.1699, longitude: -115.1398 }
+// Address suggestions via the ArcGIS World Geocoder `suggest` endpoint (free, no key — same as Route Optimizer).
+// Biased to Las Vegas so local addresses come first.
+const LAS_VEGAS = '-115.1398,36.1699'
 
-export const placesEnabled = () => !!process.env.GOOGLE_MAPS_API_KEY
-
-export async function suggestAddresses(input: string, sessionToken?: string): Promise<string[]> {
-  const key = process.env.GOOGLE_MAPS_API_KEY
-  if (!key) return []
+export async function suggestAddresses(input: string): Promise<string[]> {
+  const url = new URL('https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/suggest')
+  url.search = new URLSearchParams({
+    text: input, f: 'json', countryCode: 'USA', location: LAS_VEGAS, distance: '80000', maxSuggestions: '5', category: 'Address,Postal',
+  }).toString()
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 4000)
   try {
-    const r = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
-      method: 'POST',
-      signal: ctrl.signal,
-      headers: { 'content-type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'suggestions.placePrediction.text.text' },
-      body: JSON.stringify({
-        input,
-        includedRegionCodes: ['us'],
-        locationBias: { circle: { center: LAS_VEGAS, radius: 50000 } },
-        ...(sessionToken ? { sessionToken } : {}),
-      }),
-    })
+    const r = await fetch(url, { signal: ctrl.signal })
     if (!r.ok) return []
-    const j = (await r.json()) as { suggestions?: { placePrediction?: { text?: { text?: string } } }[] }
-    return (j.suggestions ?? []).map((s) => s.placePrediction?.text?.text).filter((t): t is string => !!t).slice(0, 5)
+    const j = (await r.json()) as { suggestions?: { text?: string; isCollection?: boolean }[] }
+    return (j.suggestions ?? []).filter((s) => !s.isCollection && s.text).map((s) => s.text!).slice(0, 5)
   } catch {
     return []
   } finally {

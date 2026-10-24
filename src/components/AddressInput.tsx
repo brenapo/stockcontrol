@@ -8,13 +8,12 @@ export function AddressInput({ value, onChange, withIcon = false }: { value: str
   const [list, setList] = useState<string[]>([])
   const [open, setOpen] = useState(false)
   const picked = useRef('')
-  const session = useRef(crypto.randomUUID())
   const q = useDebounced(value, 300)
 
   useEffect(() => {
     if (!open || q.trim().length < 3 || q === picked.current) return setList([])
     let live = true
-    api<{ suggestions: string[] }>(`/places?q=${encodeURIComponent(q)}&s=${session.current}`)
+    api<{ suggestions: string[] }>(`/places?q=${encodeURIComponent(q)}`)
       .then((r) => { if (live) setList(r.suggestions) })
       .catch(() => { if (live) setList([]) })
     return () => { live = false }
@@ -24,7 +23,6 @@ export function AddressInput({ value, onChange, withIcon = false }: { value: str
     picked.current = s
     onChange(s)
     setList([])
-    session.current = crypto.randomUUID()
   }
 
   return (
