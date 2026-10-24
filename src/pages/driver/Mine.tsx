@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { api } from '../../api'
 import { appleRouteUrl, googleRouteUrl, MAX_STOPS } from '../../contact'
 import { Icon } from '../../components/Icon'
-import { ContactButtons, MapsButton, Money, OrderBody } from '../../components/OrderBits'
+import { ContactButtons, MapsButton, OrderBody } from '../../components/OrderBits'
 import { OrderForm } from '../../components/OrderForm'
+import { SplitEditor } from '../../components/SplitEditor'
 import { Empty, Spinner, useToast } from '../../components/ui'
 import type { MenuItem, Order } from '../../types'
 
@@ -59,7 +60,7 @@ export default function Mine({ orders, menu, onChange, startAdding = false }: { 
             </button>
             <div className="min-w-0 flex-1"><OrderBody o={o} /></div>
           </div>
-          <Money o={o} />
+          <SplitEditor o={o} onSaved={onChange} />
           <div className="grid grid-cols-[1fr_auto] gap-2"><ContactButtons phone={o.phone} /><MapsButton address={o.address} /></div>
           <div className="grid grid-cols-[1fr_auto] gap-2">
             <button className="btn btn-mint" disabled={busy === o.id} onClick={() => act(o, 'deliver', 'Delivered! · in Earnings')}><Icon name="check" />Delivered</button>

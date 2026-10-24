@@ -38,7 +38,7 @@ const ownerFields = {
 }
 const ownerOrderCreate = z.object(ownerFields)
 // drivers log their own customers' deliveries: they set what they collected; the owner sets the split later
-const driverOrderCreate = z.object({ ...customerFields, amountCents: cents.nullish(), paymentMethod: z.enum(['cash', 'zelle']).nullish() })
+const driverOrderCreate = z.object({ ...customerFields, amountCents: cents.nullish(), paymentMethod: z.enum(['cash', 'zelle']).nullish(), driverCutCents: cents.nullish(), ownerOwedCents: z.number().int().min(-10_000_00).max(10_000_00).nullish() })
 const ownerOrderPatch = z.object({
   ...ownerFields,
   status: z.enum(['new', 'taken', 'delivered']).optional(),
@@ -259,6 +259,8 @@ export const routes: Route[] = [
       const [o] = await db().insert(orders).values({
         ...fields, items, source: 'driver', status: 'taken', driverId: user!.id, driverName: user!.name, takenAt: new Date(),
         amountCents: b.amountCents ?? null, paymentMethod: b.paymentMethod ?? null,
+        driverCutCents: b.driverCutCents ?? null,
+        ownerOwedCents: b.ownerOwedCents ?? (b.amountCents != null && b.driverCutCents != null ? b.amountCents - b.driverCutCents : null),
       }).returning()
       await Promise.allSettled([
         notifyNewOrder(o, `New delivery by ${user!.name}`),
@@ -368,6 +370,32 @@ export const routes: Route[] = [
     if (!o) throw new HttpError(409, 'Someone else already took it')
     await Promise.allSettled([notifyStatus(o, 'taken'), push('owner', { title: `🚗 ${user!.name} took #${o.code}`, url: '/app', tag: `o-${o.id}` })])
     return { order: serialize(o) }
+  }),
+
+  // driver sets the money on their own delivery (until it is settled); the owner can still change it
+  rt('POST', /^\/orders\/([0-9a-f-]{36})\/split$/, 'driver', async ({ params, body, user }) => {
+    const b = z.object({
+      amountCents: cents.nullish(), paymentMethod: z.enum(['cash', 'zelle']).nullish(),
+      driverCutCents: cents.nullish(), ownerOwedCents: z.number().int().min(-10_000_00).max(10_000_00).nullish(),
+    }).parse(body)
+    const order = await db().transaction(async (tx) => {
+      const [cur] = await tx.select().from(orders)
+        .where(and(eq(orders.id, params[0]), eq(orders.driverId, user!.id), isNull(orders.settledAt), ne(orders.status, 'new'))).for('update')
+      if (!cur) throw new HttpError(409, 'This delivery can no longer be changed')
+      const set: Partial<typeof orders.$inferInsert> = {}
+      if (b.amountCents !== undefined) set.amountCents = b.amountCents
+      if (b.paymentMethod !== undefined) set.paymentMethod = b.paymentMethod
+      if (b.driverCutCents !== undefined) set.driverCutCents = b.driverCutCents
+      if (b.ownerOwedCents !== undefined) set.ownerOwedCents = b.ownerOwedCents
+      else if (b.amountCents !== undefined || b.driverCutCents !== undefined) {
+        const a = 'amountCents' in set ? set.amountCents : cur.amountCents
+        set.ownerOwedCents = a != null ? a - ((('driverCutCents' in set ? set.driverCutCents : cur.driverCutCents) ?? 0)) : null
+      }
+      if (!Object.keys(set).length) return cur
+      const [o] = await tx.update(orders).set(set).where(eq(orders.id, cur.id)).returning()
+      return o
+    })
+    return { order: serialize(order) }
   }),
 
   // driver: "I settled this one with the owner" — clears it from Earnings

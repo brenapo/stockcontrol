@@ -341,7 +341,7 @@ d('Sugar Rush API', () => {
     expect((await call('owner', 'PUT', '/stock/settings', { lowThreshold: 5 })).status).toBe(200)
   })
 
-  it('drivers add their own deliveries: assigned to them, no split, stock goes down', async () => {
+  it('drivers add their own deliveries: assigned to them, stock goes down', async () => {
     expect((await call('dan', 'POST', '/orders', {})).status).toBe(400) // empty
     const r = await call('dan', 'POST', '/orders', {
       customerName: 'Neighbor', address: '9 Fudge Ave', items: [{ id: 1, qty: 1 }], amountCents: 900, paymentMethod: 'cash',
@@ -349,7 +349,7 @@ d('Sugar Rush API', () => {
     })
     expect(r.status).toBe(200)
     const o = r.json.order
-    expect(o).toMatchObject({ source: 'driver', status: 'taken', driverName: 'Dan', amountCents: 900, paymentMethod: 'cash', driverCutCents: null, ownerOwedCents: null })
+    expect(o).toMatchObject({ source: 'driver', status: 'taken', driverName: 'Dan', amountCents: 900, paymentMethod: 'cash', driverCutCents: 900, ownerOwedCents: 0 }) // driver may set the split; status/driverId ignored
     // not offered to other drivers; owner sees it
     expect((await call('eve', 'GET', '/orders')).json.orders.map((x: any) => x.id)).not.toContain(o.id)
     expect((await call('owner', 'GET', '/orders')).json.orders.map((x: any) => x.id)).toContain(o.id)
@@ -359,6 +359,18 @@ d('Sugar Rush API', () => {
     // owner sets the split afterwards
     const p = await call('owner', 'PATCH', `/orders/${o.id}`, { driverCutCents: 300 })
     expect(p.json.order).toMatchObject({ driverCutCents: 300, ownerOwedCents: 600 })
+  })
+
+  it('drivers set what they keep / pass to the owner on their own deliveries until settled', async () => {
+    const r = await call('dan', 'POST', '/orders', { address: '7 Split Rd', amountCents: 2000, driverCutCents: 500 })
+    expect(r.json.order).toMatchObject({ amountCents: 2000, driverCutCents: 500, ownerOwedCents: 1500 })
+    const id = r.json.order.id
+    expect((await call('eve', 'POST', `/orders/${id}/split`, { driverCutCents: 2000 })).status).toBe(409) // not hers
+    expect((await call('dan', 'POST', `/orders/${id}/split`, { driverCutCents: 800 })).json.order).toMatchObject({ driverCutCents: 800, ownerOwedCents: 1200 })
+    expect((await call('dan', 'POST', `/orders/${id}/split`, { ownerOwedCents: 1000 })).json.order.ownerOwedCents).toBe(1000) // typed by hand
+    await call('dan', 'POST', `/orders/${id}/deliver`)
+    await call('dan', 'POST', `/orders/${id}/clear`)
+    expect((await call('dan', 'POST', `/orders/${id}/split`, { driverCutCents: 0 })).status).toBe(409) // settled = locked
   })
 
   it('Earnings: delivered orders wait with their date until the driver clears them', async () => {

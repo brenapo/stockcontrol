@@ -9,7 +9,7 @@ import { Segmented, useToast } from './ui'
 
 type Customer = { name: string | null; phone: string | null; address: string | null; items: { id?: number; qty: number; note?: string }[]; itemsText: string | null }
 
-// driver = a driver logging their own customer: no customer lookup, no payout split (the owner sets it later)
+// driver = a driver logging their own customer: no customer lookup; the driver may set the split (the owner can change it)
 export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?: Order; menu: MenuItem[]; onSaved: (o: Order) => void; driver?: boolean }) {
   const { toast, fail } = useToast()
   const edit = !!initial
@@ -78,7 +78,7 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
       const body: Record<string, unknown> = {
         customerName: name || null, phone: phone || null, address: address || null, notes: notes || null, itemsText: itemsText || null,
         amountCents: toCents(amount), paymentMethod: pay,
-        ...(driver ? {} : { driverCutCents: toCents(cut), ownerOwedCents: toCents(owed) }),
+        driverCutCents: toCents(cut), ownerOwedCents: toCents(owed),
       }
       const items = Object.entries(qty).map(([id, n]) => ({ id: Number(id), qty: n, note: which[Number(id)]?.trim() || null }))
       const key = (i: { id?: number; qty: number; note?: string | null }) => `${i.id}:${i.qty}:${i.note ?? ''}`
@@ -172,22 +172,22 @@ export function OrderForm({ initial, menu, onSaved, driver = false }: { initial?
           )}
         </div>
         <Segmented<Pay> value={pay} onChange={setPay} options={[{ value: 'cash', label: 'Cash', icon: 'cash' }, { value: 'zelle', label: 'Zelle', icon: 'bank' }]} />
-        {!driver && <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="label" htmlFor="cut">Driver keeps</label>
+            <label className="label" htmlFor="cut">{driver ? 'You keep' : 'Driver keeps'}</label>
             <div className="relative">
               <span className="absolute left-4 top-[13px] text-lg font-black text-mute">$</span>
               <input id="cut" className="field !pl-9" inputMode="decimal" placeholder="0.00" value={cut} onChange={(e) => setCut(e.target.value)} />
             </div>
           </div>
           <div>
-            <label className="label" htmlFor="owed">Owes owner</label>
+            <label className="label" htmlFor="owed">{driver ? 'Pass to owner' : 'Owes owner'}</label>
             <div className="relative">
               <span className="absolute left-4 top-[13px] text-lg font-black text-mute">$</span>
               <input id="owed" className="field !pl-9" inputMode="decimal" placeholder="0.00" value={owed} onChange={(e) => { setOwed(e.target.value); setOwedTouched(true) }} />
             </div>
           </div>
-        </div>}
+        </div>
       </div>
 
       <textarea className="field !min-h-[84px] py-3" placeholder="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} />
